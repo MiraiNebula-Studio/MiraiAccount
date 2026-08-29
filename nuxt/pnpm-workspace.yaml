@@ -3,4 +3,5 @@
 allowBuilds:
   esbuild: true
   ts-ip2region2: true
+  vue-demi: true
 strictDepBuilds: true

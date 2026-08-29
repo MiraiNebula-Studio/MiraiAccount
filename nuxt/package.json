@@ -12,8 +12,12 @@
   "dependencies": {
     "@mikro-orm/core": "^6.6.2",
     "@mikro-orm/mariadb": "^6.6.2",
+    "@simplewebauthn/browser": "^9.0.1",
     "@simplewebauthn/server": "^9.0.3",
     "@simplewebauthn/types": "^9.0.1",
+    "@vueuse/core": "^10.9.0",
+    "@vueuse/router": "^10.9.0",
+    "axios": "^1.6.7",
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
@@ -21,16 +25,21 @@
     "express-useragent": "^1.0.15",
     "fs-extra": "^11.2.0",
     "handlebars": "^4.7.8",
+    "lodash": "^4.17.21",
     "mariadb": "^3.2.3",
+    "md5": "^2.3.0",
     "mjml": "^4.15.3",
     "nodemailer": "^6.9.8",
     "nodemailer-smtp-transport": "^2.7.4",
     "nuxt": "^4.5.2",
+    "pinia": "^2.1.7",
     "reflect-metadata": "^0.2.2",
+    "sass-embedded": "^1.103.1",
     "ts-ip2region2": "^1.12.0",
     "uuid": "^9.0.1",
     "vue": "^3.5.41",
-    "vue-router": "^5.2.0"
+    "vue-router": "^5.2.0",
+    "vuetify": "3.5.8"
   },
   "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621"
 }
