@@ -11,7 +11,8 @@ export default defineConfig({
     port: 1240,
     proxy: {
       '/v1': {
-        target: 'http://127.0.0.1:1239/api',
+        // 数据层从旧 Nest 后端切换到新的 Nuxt/Nitro 后端（Nuxt api 挂载于 /api）
+        target: 'http://127.0.0.1:3000/api',
         rewrite: (path) => path.replace(/^\/v1/, ''),
         changeOrigin: true,
         ws: true

@@ -1,0 +1,24 @@
+{
+  // https://nuxt.com/docs/guide/concepts/typescript
+  // MikroORM v6 实体依赖 legacy(experimentalDecorators) 语义：field decorator 需接收类原型。
+  // 否则 rolldown/oxc 按标准 TC39 decorators 编译，PrimaryKey 等装饰器会拿到 undefined。
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./.nuxt/tsconfig.app.json"
+    },
+    {
+      "path": "./.nuxt/tsconfig.server.json"
+    },
+    {
+      "path": "./.nuxt/tsconfig.shared.json"
+    },
+    {
+      "path": "./.nuxt/tsconfig.node.json"
+    }
+  ]
+}

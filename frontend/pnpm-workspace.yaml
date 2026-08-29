@@ -1,0 +1,7 @@
+# 项目根（frontend 独立包）；放行构建脚本以便 vite/esbuild 正常运行
+packages: ['*']
+dangerouslyAllowAllBuilds: true
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - 'esbuild'
+  - 'vue-demi'
