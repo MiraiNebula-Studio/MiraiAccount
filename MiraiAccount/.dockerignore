@@ -1,0 +1,18 @@
+# 仅打包构建所需源码与清单，剔除本地产物与敏感配置。
+**/node_modules
+**/.nuxt
+**/.output
+.git
+.gitignore
+.vscode
+docs
+tools
+config.json
+config.json.1
+*.log
+Dockerfile
+docker-compose.yml
+.dockerignore
+.env
+
+# 构建阶段需使用 package 清单，故 package.json/pnpm-*.yaml 不移出。

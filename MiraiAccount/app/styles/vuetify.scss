@@ -1,0 +1,5 @@
+// 通过 SCSS 入口接入 Vuetify 样式。
+// 不可直接在 nuxt.config css 数组里放 'vuetify/styles'：dev 下 Vite 会把 .css 的 @fs
+// 请求当 JS 模块返回（Content-Type: text/javascript），导致 <link> 忽略、样式整体丢失。
+// 走 @use 由 sass 编译成 text/css 即可正常加载。
+@use 'vuetify/styles';

@@ -1,0 +1,8 @@
+# pnpm 11 项目级设置：允许下列依赖在安装期执行构建脚本。
+# 注意：pnpm v11 已用 allowBuilds 替代旧 onlyBuiltDependencies，值须为布尔。
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  ts-ip2region2: true
+  vue-demi: true
+strictDepBuilds: true

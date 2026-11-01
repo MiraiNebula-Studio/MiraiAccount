@@ -1,0 +1,70 @@
+{
+  "name": "mirai-account",
+  "version": "1.0.0",
+  "description": "MiraiAccount 账户管理系统：基于 Nuxt 4 与 MikroORM，聚合接入 OAuth2/OIDC、WebAuthn 无密码登录、邮箱验证码与 TOTP 等鉴权能力的外部账户服务。",
+  "keywords": [
+    "mirai",
+    "account",
+    "sso",
+    "oauth2",
+    "oidc",
+    "webauthn",
+    "passkey",
+    "totp",
+    "nuxt",
+    "mikro-orm"
+  ],
+  "author": "Lazy <mirainebula@163.com>",
+  "license": "UNLICENSED",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@mikro-orm/core": "^6.6.2",
+    "@mikro-orm/mariadb": "^6.6.2",
+    "@simplewebauthn/browser": "^9.0.1",
+    "@simplewebauthn/server": "^9.0.3",
+    "@simplewebauthn/types": "^9.0.1",
+    "@vueuse/core": "^10.9.0",
+    "@vueuse/router": "^10.9.0",
+    "axios": "^1.6.7",
+    "bcryptjs": "^2.4.3",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "dayjs": "^1.11.18",
+    "express-useragent": "^1.0.15",
+    "fs-extra": "^11.2.0",
+    "handlebars": "^4.7.8",
+    "lodash": "^4.17.21",
+    "mariadb": "^3.2.3",
+    "md5": "^2.3.0",
+    "mjml": "^4.15.3",
+    "nodemailer": "^6.9.8",
+    "nodemailer-smtp-transport": "^2.7.4",
+    "nuxt": "^4.5.2",
+    "pinia": "^2.1.7",
+    "qrcode": "^1.5.4",
+    "reflect-metadata": "^0.2.2",
+    "sass-embedded": "^1.103.1",
+    "speakeasy": "^2.0.0",
+    "ts-ip2region2": "^1.12.0",
+    "uuid": "^9.0.1",
+    "vue": "^3.5.41",
+    "vue-router": "^5.2.0",
+    "vuetify": "3.5.8"
+  },
+  "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6",
+    "@types/speakeasy": "^2.0.10"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": ["@parcel/watcher"]
+  }
+}

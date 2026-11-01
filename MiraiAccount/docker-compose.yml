@@ -1,0 +1,39 @@
+# MiraiAccount 容器编排：一次性拉起 MariaDB 与应用。
+# 使用：cp .env.example .env && 按需编辑后 docker compose up -d
+#
+# 首次启动后访问 http://<主机>:3000 进入开箱向导，
+# 数据库主机填本编排的服务名 db（端口 3306），其余为普通数据库连接信息。
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      # 首次初始化创建 root 密码与默认库；已有数据卷时这些变量不生效。
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-mirai_db_root}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-mirai}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      # mariadb 官方镜像镜像自带 healthcheck，此处显式声明以便 app 按状态就绪后启动。
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      # 生产强制：缺失时应用拒绝启动。请使用足够随机的强口令。
+      NUXT_SESSION_PASSWORD: ${NUXT_SESSION_PASSWORD:?必须通过 .env 设置 NUXT_SESSION_PASSWORD}
+    volumes:
+      # 运行配置含数据库/SMTP 凭据与 OIDC 私钥，必须持久化并妥善保护权限。
+      - ./config.json:/app/config.json
+
+volumes:
+  db-data:
