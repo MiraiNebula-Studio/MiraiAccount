@@ -5,6 +5,8 @@ import { browserSupportsWebAuthn } from '@simplewebauthn/browser'
 import { indexStore } from '@/stores'
 import { userStore } from '@/stores/user'
 import { cancelAccountApi, exportMyDataApi } from '@/apis/user'
+import M3Icon from '@/components/m3/M3Icon.vue'
+import M3Chip from '@/components/m3/M3Chip.vue'
 
 // dialogs
 import ChangeEmail from './dialog/changeEmail.vue'
@@ -23,129 +25,130 @@ const TotpDialog = ref<InstanceType<typeof Totp>>()
 
 const { showMsg, openConfirmDialog } = indexStore()
 
-// 二步验证是否已启用，用于行首状态徽标展示。
 const otpEnabled = computed(() => !!userStore().info?.otpActive)
-
-// 超级管理员是站点唯一的管理入口，后端已禁止注销，这里前置提示避免无效请求。
 const isSuperAdmin = computed(() => userStore().info?.role === 'superadmin')
 
-// 用 computed 而非一次性求值：用户信息是异步加载的，若在 setup 时就过滤，
-// 超级管理员在信息到达前会把「注销账户」渲染出来。
-const btns = computed(() => arrayFilter([
-  {
-    title: '更改邮箱',
-    icon: 'email-edit-outline',
-    color: '',
-    click: () => changeEmailDialog.value?.openDialog()
-  },
-  {
-    title: '更改密码',
-    icon: 'lock-reset',
-    color: '',
-    click: () => changePwdDialog.value?.openDialog()
-  },
-  {
-    title: 'PassKey',
-    icon: 'fingerprint',
-    color: '',
-    click: () => bindANDialog.value?.openDialog(),
-    condition: () => browserSupportsWebAuthn()
-  },
-  {
-    title: '登录日志',
-    icon: 'script-text-key-outline',
-    color: '',
-    click: () => LoginLogsDialog.value?.openDialog()
-  },
-  {
-    title: '会话管理',
-    icon: 'monitor-multiple',
-    color: '',
-    click: () => SessionsDialog.value?.openDialog()
-  },
-  {
-    title: '二步验证',
-    icon: 'shield-key-outline',
-    color: '',
-    click: () => TotpDialog.value?.openDialog()
-  },
-  {
-    title: '导出我的数据',
-    icon: 'export-variant',
-    color: '',
-    click: async () => {
-      try {
-        await openConfirmDialog('导出数据', '将导出你的全部账号数据，并发送至绑定邮箱。确定继续？')
-      } catch {
-        return
-      }
-      try {
-        const { msg } = await exportMyDataApi()
-        showMsg(msg, 'green')
-      } catch (err: any) {
-        showMsg(err?.message ?? '导出失败', 'red')
-      }
-    }
-  },
-  {
-    title: '注销账户',
-    icon: 'account-cancel-outline',
-    color: 'red',
-    // 超级管理员是站点唯一的管理入口，注销后只能进入维护模式，故直接不展示该入口；
-    // 普通管理员（admin）与普通用户正常可见可用，后端仍会兜底拦截「最后一个管理员」。
-    condition: () => !isSuperAdmin.value,
-    click: async () => {
-      try {
-        await openConfirmDialog(
-          '严重警告',
-          '注销后，你的全部 OAuth 应用、令牌和关联数据将被永久删除，此操作不可逆转，确定继续？',
-          'error'
-        )
-      } catch {
-        return
-      }
-      try {
-        const { msg } = await cancelAccountApi()
-        showMsg(msg, 'green')
-        window.location.href = '/'
-      } catch {
-        // 错误提示已由请求拦截器统一弹出，这里只需中断跳转。
-        return
-      }
-    }
-  }
-]))
+const btns = computed(() =>
+  arrayFilter([
+    {
+      title: '更改邮箱',
+      desc: '更换绑定的登录邮箱',
+      icon: 'alternate_email',
+      color: '',
+      click: () => changeEmailDialog.value?.openDialog(),
+    },
+    {
+      title: '更改密码',
+      desc: '更新账号登录密码',
+      icon: 'password',
+      color: '',
+      click: () => changePwdDialog.value?.openDialog(),
+    },
+    {
+      title: 'PassKey',
+      desc: '使用设备生物识别无密码登录',
+      icon: 'fingerprint',
+      color: '',
+      click: () => bindANDialog.value?.openDialog(),
+      condition: () => browserSupportsWebAuthn(),
+    },
+    {
+      title: '登录日志',
+      desc: '查看最近的登录记录',
+      icon: 'history',
+      color: '',
+      click: () => LoginLogsDialog.value?.openDialog(),
+    },
+    {
+      title: '会话管理',
+      desc: '管理已登录的设备会话',
+      icon: 'devices',
+      color: '',
+      click: () => SessionsDialog.value?.openDialog(),
+    },
+    {
+      title: '二步验证',
+      desc: '使用 TOTP 动态验证码加强保护',
+      icon: 'verified_user',
+      color: '',
+      click: () => TotpDialog.value?.openDialog(),
+    },
+    {
+      title: '导出我的数据',
+      desc: '导出全部账号数据并发送至邮箱',
+      icon: 'download',
+      color: '',
+      click: async () => {
+        try {
+          await openConfirmDialog('导出数据', '将导出你的全部账号数据，并发送至绑定邮箱。确定继续？')
+        } catch {
+          return
+        }
+        try {
+          const { msg } = await exportMyDataApi()
+          showMsg(msg, 'green')
+        } catch (err: any) {
+          showMsg(err?.message ?? '导出失败', 'red')
+        }
+      },
+    },
+    {
+      title: '注销账户',
+      desc: '永久删除账号与关联数据',
+      icon: 'person_off',
+      color: 'red',
+      condition: () => !isSuperAdmin.value,
+      click: async () => {
+        try {
+          await openConfirmDialog(
+            '严重警告',
+            '注销后，你的全部 OAuth 应用、令牌和关联数据将被永久删除，此操作不可逆转，确定继续？',
+            'error'
+          )
+        } catch {
+          return
+        }
+        try {
+          const { msg } = await cancelAccountApi()
+          showMsg(msg, 'green')
+          window.location.href = '/'
+        } catch {
+          return
+        }
+      },
+    },
+  ])
+)
 </script>
 
 <template>
-  <div>
-    <v-card-text>
-      <v-list lines="one" class="pa-0">
-        <v-list-item
-          v-for="(item, i) in btns"
-          :key="i"
-          v-ripple
-          :title="item.title"
-          :color="item.color"
+  <div class="security">
+    <h2 class="security-title">账号安全</h2>
+
+    <ul class="m3-list security-list">
+      <li v-for="item in btns" :key="item.title">
+        <button
+          type="button"
+          class="m3-list__item m3-state-layer"
+          :class="item.color === 'red' && 'is-danger'"
           @click="item.click"
         >
-          <template #prepend>
-            <v-icon variant="text">mdi-{{ item.icon }}</v-icon>
-          </template>
-          <template #append>
-            <v-chip
-              v-if="item.title === '二步验证'"
-              size="small"
-              :color="otpEnabled ? 'green' : 'grey'"
-              :class="otpEnabled ? '' : 'text-white'"
-            >
-              {{ otpEnabled ? '已开启' : '未开启' }}
-            </v-chip>
-            <v-icon>mdi-arrow-right</v-icon>
-          </template>
-        </v-list-item>
-      </v-list>
-    </v-card-text>
+          <M3Icon class="m3-list__icon" :name="item.icon" :size="22" />
+          <span class="m3-list__main">
+            <span class="m3-list__title">{{ item.title }}</span>
+            <span class="m3-list__desc">{{ item.desc }}</span>
+          </span>
+          <M3Chip
+            v-if="item.title === '二步验证'"
+            size="sm"
+            :variant="otpEnabled ? 'tertiary' : 'outlined'"
+          >
+            {{ otpEnabled ? '已开启' : '未开启' }}
+          </M3Chip>
+          <M3Icon name="chevron_right" :size="20" />
+        </button>
+      </li>
+    </ul>
 
     <ChangeEmail ref="changeEmailDialog" />
     <ChangePwd ref="changePwdDialog" />
@@ -155,3 +158,23 @@ const btns = computed(() => arrayFilter([
     <Totp ref="TotpDialog" />
   </div>
 </template>
+
+<style scoped>
+.security-title {
+  margin: 0 0 var(--m3e-space-4);
+  font: var(--m3e-type-title-large);
+}
+
+.security-list {
+  gap: 2px;
+}
+
+.m3-list__item {
+  align-items: center;
+}
+
+.m3-list__item.is-danger .m3-list__icon,
+.m3-list__item.is-danger .m3-list__title {
+  color: var(--error);
+}
+</style>

@@ -3,17 +3,20 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouteHash, useRouteQuery } from '@vueuse/router'
 import { useRouter } from 'vue-router'
 import { indexStore } from '@/stores'
-
-const router = useRouter()
 import { checkLoginApi } from '@/apis/auth'
 import { getOAuth2AppInfoApi, getCodeApi } from '@/apis/oauth2'
-import { useDisplay } from 'vuetify'
+import M3Card from '@/components/m3/M3Card.vue'
+import M3Button from '@/components/m3/M3Button.vue'
+import M3Chip from '@/components/m3/M3Chip.vue'
+import M3Icon from '@/components/m3/M3Icon.vue'
+import M3Progress from '@/components/m3/M3Progress.vue'
+
+const router = useRouter()
 
 const emit = defineEmits<{
   update: [type: 'title' | 'image', arg: string]
   reset: []
 }>()
-const { xs } = useDisplay()
 const { isLogin, showMsg } = indexStore()
 const client_id = useRouteQuery('client_id')
 const response_type = useRouteQuery('response_type')
@@ -36,7 +39,7 @@ const toErr = (msg: string, img = '044.png') => {
   emit('update', 'image', img)
   router.replace({
     path: '/oauth2/error',
-    query: { msg }
+    query: { msg },
   })
 }
 
@@ -44,14 +47,14 @@ const toErr = (msg: string, img = '044.png') => {
 const SCOPE_DESC: Record<string, string> = {
   openid: '获取你的身份标识（OIDC）',
   profile: '读取用户名等个人资料',
-  email: '读取你的邮箱地址'
+  email: '读取你的邮箱地址',
 }
 const scopeList = computed(() => {
   const list: { key: string; desc: string }[] = []
   const raw = (scope2.value as string) ?? ''
   const scopes = raw.split(/\s+/).filter(Boolean)
   for (const s of scopes) {
-    if (s in SCOPE_DESC) list.push({ key: s, desc: SCOPE_DESC[s] })
+    if (s in SCOPE_DESC) list.push({ key: s, desc: SCOPE_DESC[s]! })
     else list.push({ key: s, desc: '自定义权限' })
   }
   return list
@@ -62,7 +65,7 @@ const checkQuery = () => {
     const thisUrl = encodeURIComponent(window.location.href)
     return router.replace({
       path: '/auth/login',
-      query: { redirect: thisUrl }
+      query: { redirect: thisUrl },
     })
   }
   if (!client_id.value) return toErr('无效的客户端 ID')
@@ -114,7 +117,7 @@ const back = () => {
 }
 
 onMounted(async () => {
-  // 授权页经整页跳转载入，store 登录态被重置；需先探测会话同步登录态，避免已登录用户被误判为未登录。
+  // 授权页经整页跳转载入，store 登录态被重置；需先探测会话同步登录态。
   const { data } = await checkLoginApi().catch(() => ({ data: { isLogin: false } }))
   isLogin.value = !!data?.isLogin
   checkQuery()
@@ -124,79 +127,163 @@ onUnmounted(() => emit('reset'))
 </script>
 
 <template>
-  <v-card :disabled="!checked" variant="flat" class="brightness" :loading="cardLoading">
-    <v-card-text :class="ok ? 'pb-0' : ''">
-      <p class="text-body-1">第三方应用 {{ clientInfo?.name }} 正在向您请求获取权限</p>
-      <v-card v-if="!ok" class="mt-4" variant="tonal" color="success">
-        <v-card-title>欧耶 ~ (/≧▽≦)/~</v-card-title>
-        <v-card-text>授权成功，正在重定向......</v-card-text>
-      </v-card>
+  <div class="authorize">
+    <div v-if="cardLoading" class="authorize-loading">
+      <M3Progress circular :size="28" />
+      <span>正在获取应用信息…</span>
+    </div>
 
-      <v-card color="primary" variant="tonal" class="my-4">
-        <v-card-title class="text-body-1"> 应用信息 </v-card-title>
-        <v-card-text>
-          <v-row v-if="!xs">
-            <v-col cols="6" sm="12" md="6">
-              <p class="text-subtitle-1 font-weight-medium">ID</p>
-              <span class="text-body-2 text-medium-emphasis">{{ clientInfo?.id }}</span>
-            </v-col>
-            <v-col cols="6" sm="12" md="6">
-              <p class="text-subtitle-1 font-weight-medium">创建时间</p>
-              <span class="text-body-2 text-medium-emphasis">{{
-                new Date(clientInfo?.createdAt ?? '').toLocaleString()
-              }}</span>
-            </v-col>
-          </v-row>
-          <v-list v-else density="compact" base-color="primary">
-            <v-list-item title="ID" :subtitle="clientInfo?.id" prepend-icon="mdi-id-card">
-            </v-list-item>
-            <v-list-item
-              title="创建时间"
-              :subtitle="new Date(clientInfo?.createdAt ?? '').toLocaleString()"
-              prepend-icon="mdi-clock-time-four-outline"
-            >
-            </v-list-item>
-          </v-list>
-        </v-card-text>
-      </v-card>
-      <v-card v-if="ok" color="warning" variant="tonal">
-        <v-card-title class="text-body-1"> 授权信息 </v-card-title>
-        <v-card-text class="pb-0">
-          <v-list density="compact" base-color="orange-darken-2">
-            <v-list-item title="UID" prepend-icon="mdi-id-card"> </v-list-item>
-            <v-list-item title="用户名" prepend-icon="mdi-account-circle-outline"> </v-list-item>
-            <v-list-item title="邮箱" prepend-icon="mdi-email-outline"> </v-list-item>
-            <v-list-item title="注册时间" prepend-icon="mdi-clock-time-four-outline"> </v-list-item>
-          </v-list>
-          <template v-if="scopeList.length">
-            <p class="text-body-2 font-weight-medium mt-3 mb-1"> 请求的权限 </p>
-            <v-list density="compact" base-color="orange-darken-2">
-              <v-list-item
-                v-for="s in scopeList"
-                :key="s.key"
-                :title="s.desc"
-                :subtitle="s.key"
-                prepend-icon="mdi-shield-key-outline"
-              >
-              </v-list-item>
-            </v-list>
-          </template>
-        </v-card-text>
-      </v-card>
-    </v-card-text>
-    <v-card-actions v-if="ok" style="padding: 1rem">
-      <v-btn class="flex-grow-1" color="error" prepend-icon="mdi-close" @click="back"> 取消 </v-btn>
+    <template v-else>
+      <p class="authorize-lead">
+        第三方应用 <b>{{ clientInfo?.name }}</b> 正在向您请求获取权限
+      </p>
 
-      <v-btn
-        class="flex-grow-1"
-        color="primary"
-        variant="outlined"
-        append-icon="mdi-check"
-        @click="authorize"
-        :loading="btnLoading"
-      >
-        授权
-      </v-btn>
-    </v-card-actions>
-  </v-card>
+      <div v-if="!ok" class="m3-banner">
+        <M3Icon name="check_circle" :size="20" />
+        <div>
+          <b>授权成功</b>
+          <p>正在重定向回应用，请稍候…</p>
+        </div>
+      </div>
+
+      <M3Card v-if="ok" variant="outlined" class="authorize-section" title="应用信息">
+        <div class="authorize-grid">
+          <div>
+            <span class="authorize-label">ID</span>
+            <span class="authorize-value">{{ clientInfo?.id }}</span>
+          </div>
+          <div>
+            <span class="authorize-label">创建时间</span>
+            <span class="authorize-value">{{ new Date(clientInfo?.createdAt ?? '').toLocaleString() }}</span>
+          </div>
+        </div>
+      </M3Card>
+
+      <M3Card v-if="ok" variant="filled" class="authorize-section" title="授权信息">
+        <ul class="m3-list">
+          <li class="m3-list__item">
+            <M3Icon class="m3-list__icon" name="fingerprint" :size="20" />
+            <span class="m3-list__main"><span class="m3-list__title">UID · 用户名 · 邮箱 · 注册时间</span></span>
+          </li>
+          <li class="m3-list__item">
+            <M3Icon class="m3-list__icon" name="badge" :size="20" />
+            <span class="m3-list__main"><span class="m3-list__title">基础个人资料</span></span>
+          </li>
+        </ul>
+
+        <template v-if="scopeList.length">
+          <h4 class="authorize-subtitle">请求的权限</h4>
+          <div class="authorize-scopes">
+            <M3Chip v-for="s in scopeList" :key="s.key" variant="tertiary" icon="shield" :title="s.desc">
+              {{ s.key }}
+            </M3Chip>
+          </div>
+          <ul class="m3-list">
+            <li v-for="s in scopeList" :key="s.key" class="m3-list__item">
+              <M3Icon class="m3-list__icon" name="shield" :size="18" />
+              <span class="m3-list__main">
+                <span class="m3-list__title">{{ s.desc }}</span>
+                <span class="m3-list__desc">{{ s.key }}</span>
+              </span>
+            </li>
+          </ul>
+        </template>
+      </M3Card>
+
+      <div v-if="ok" class="authorize-actions">
+        <M3Button variant="text" size="md" icon="close" @click="back">取消</M3Button>
+        <M3Button variant="filled" size="md" icon="check" :loading="btnLoading" @click="authorize">
+          授权
+        </M3Button>
+      </div>
+    </template>
+  </div>
 </template>
+
+<style scoped>
+.authorize {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m3e-space-4);
+}
+
+.authorize-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--m3e-space-3);
+  padding: var(--m3e-space-10);
+  color: var(--on-surface-variant);
+}
+
+.authorize-lead {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font: var(--m3e-type-body-large);
+}
+
+.authorize-lead b {
+  color: var(--primary);
+}
+
+.authorize-section {
+  padding: var(--m3e-space-4);
+}
+
+.authorize-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--m3e-space-3);
+}
+
+.authorize-label {
+  display: block;
+  color: var(--on-surface-variant);
+  font: var(--m3e-type-label-large);
+}
+
+.authorize-value {
+  display: block;
+  margin-top: 2px;
+  font: var(--m3e-type-body-medium);
+  word-break: break-all;
+}
+
+.authorize-subtitle {
+  margin: var(--m3e-space-4) 0 var(--m3e-space-2);
+  font: var(--m3e-type-title-small);
+}
+
+.authorize-scopes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--m3e-space-2);
+  margin-bottom: var(--m3e-space-2);
+}
+
+.authorize-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--m3e-space-2);
+  margin-top: var(--m3e-space-2);
+}
+
+.m3-banner p {
+  margin: 2px 0 0;
+  font: var(--m3e-type-body-small);
+}
+
+@media (max-width: 560px) {
+  .authorize-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .authorize-actions {
+    flex-direction: column-reverse;
+  }
+
+  .authorize-actions :deep(.m3-btn) {
+    width: 100%;
+  }
+}
+</style>

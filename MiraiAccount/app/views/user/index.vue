@@ -2,38 +2,35 @@
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import md5 from 'md5'
-import { useDisplay } from 'vuetify'
 import { indexStore } from '@/stores'
 import { userStore } from '@/stores/user'
 import { useAuth } from '@/hooks/useAuth'
 import { proxyImg } from '@/utils/img'
-
-const { xs } = useDisplay()
+import M3Icon from '@/components/m3/M3Icon.vue'
+import M3Button from '@/components/m3/M3Button.vue'
+import M3IconButton from '@/components/m3/M3IconButton.vue'
+import M3Chip from '@/components/m3/M3Chip.vue'
+import Footer from '@/components/Footer.vue'
 
 const option = ref({
   title: '',
-  image: ''
+  image: '',
 })
 
 const update = (type: keyof typeof option.value, arg: string) => (option.value[type] = arg)
-
-const reset = () =>
-  (option.value = {
-    title: '',
-    image: ''
-  })
+const reset = () => (option.value = { title: '', image: '' })
 
 const menus = [
-  { name: '个人信息', icon: 'account-circle-outline', path: 'info' },
-  { name: '账号安全', icon: 'shield-key-outline', path: 'security' },
+  { name: '个人信息', icon: 'badge', path: 'info' },
+  { name: '账号安全', icon: 'shield', path: 'security' },
   { name: 'OAuth2 应用', icon: 'apps', path: 'apps' },
-  { name: '授权管理', icon: 'link-variant', path: 'grants' },
-  { name: '我的消息', icon: 'inbox-outline', path: 'messages' }
+  { name: '授权管理', icon: 'link', path: 'grants' },
+  { name: '我的消息', icon: 'inbox', path: 'messages' },
 ]
 
 const { isAdmin } = userStore()
 const { info } = storeToRefs(userStore())
-const { openConfirmDialog, progressLinear } = indexStore()
+const { openConfirmDialog } = indexStore()
 const { logout } = useAuth()
 
 const btnLoading = ref(false)
@@ -48,91 +45,256 @@ const toLogout = async () => {
     btnLoading.value = false
   }
 }
+
+const avatar = () =>
+  proxyImg(`https://cravatar.cn/avatar/${md5((info.value?.email || '').trim().toLowerCase())}?s=300&r=R&d=`)
 </script>
 
 <template>
-  <v-row class="h-100" justify="center" align="center" no-gutters>
-    <v-col xl="6" md="8" sm="10" xs="12" align-self="center">
-      <v-card v-if="xs" class="mb-5" variant="text">
-        <v-card-actions class="d-flex flex-wrap justify-space-between ga-4">
-          <v-btn color="primary" variant="text" prepend-icon="mdi-arrow-left" to="/"
-            >返回首页</v-btn
+  <div class="user-shell">
+    <header class="user-topbar">
+      <div class="user-brand">
+        <M3Icon name="person" :size="22" fill />
+        <span>用户中心</span>
+      </div>
+      <div class="app-spacer" />
+      <div class="user-actions">
+        <M3IconButton icon="home" label="返回首页" to="/" />
+        <M3IconButton
+          v-if="isAdmin()"
+          icon="dashboard"
+          label="管理面板"
+          to="/admin/dashboard"
+        />
+        <M3Button
+          variant="text"
+          size="xs"
+          icon="logout"
+          :loading="btnLoading"
+          @click="toLogout"
+        >
+          退出
+        </M3Button>
+      </div>
+    </header>
+
+    <div class="user-body">
+      <aside class="user-profile">
+        <div class="m3-avatar user-avatar">
+          <img :src="avatar()" :alt="info?.username" loading="lazy" />
+        </div>
+        <h1 class="user-name">{{ info?.username }}</h1>
+        <p class="user-mail">{{ info?.email }}</p>
+        <div class="user-chips">
+          <M3Chip size="sm" :variant="isAdmin() ? 'tertiary' : 'secondary'">
+            {{ isAdmin() ? '管理员' : '普通用户' }}
+          </M3Chip>
+          <M3Chip v-if="info?.otpActive" size="sm" variant="primary" icon="verified_user">
+            已启用 2FA
+          </M3Chip>
+        </div>
+        <M3Button
+          v-if="isAdmin()"
+          class="user-admin-btn"
+          variant="tonal"
+          size="sm"
+          icon="dashboard"
+          to="/admin/dashboard"
+          block
+        >
+          管理面板
+        </M3Button>
+      </aside>
+
+      <main class="user-main">
+        <nav class="m3-tabs user-tabs" aria-label="用户中心导航">
+          <NuxtLink
+            v-for="m in menus"
+            :key="m.path"
+            :to="m.path"
+            class="m3-tab m3-state-layer"
+            active-class="is-active"
           >
-          <v-btn
-            color="red"
-            variant="text"
-            append-icon="mdi-arrow-right"
-            @click="toLogout"
-            :loading="btnLoading"
-            >退出登录</v-btn
-          >
-        </v-card-actions>
-      </v-card>
-      <v-row>
-        <v-col lg="3" md="4" sm="4" cols="12">
-          <v-card
-            variant="flat"
-            :class="!xs && 'brightness'"
-            :style="{ background: xs ? 'unset' : 'rgb(var(--v-theme-surface))' }"
-          >
-            <v-card-text class="text-center">
-              <v-avatar
-                :image="proxyImg(`https://cravatar.cn/avatar/${md5((info?.email || '').trim().toLowerCase())}?s=300&r=R&d=`)"
-                :size="xs ? '100' : '80%'"
-              ></v-avatar>
-              <v-btn
-                v-if="isAdmin() && xs"
-                variant="text"
-                class="mt-4 my-3 text-h5 font-weight-regular d-block"
-                to="/admin/dashboard"
-                color="amber"
-                >{{ info?.username }}</v-btn
-              >
-              <p v-else class="mt-4 my-3 text-h5">{{ info?.username }}</p>
-              <div v-if="!xs" class="d-flex flex-wrap justify-center ga-4">
-                <v-btn color="primary" variant="tonal" prepend-icon="mdi-arrow-left" block to="/"
-                  >返回首页</v-btn
-                >
-                <v-btn
-                  v-if="isAdmin()"
-                  color="orange"
-                  variant="tonal"
-                  prepend-icon="mdi-view-dashboard-outline"
-                  block
-                  to="/admin/dashboard"
-                  >管理面板</v-btn
-                >
-                <v-btn
-                  color="red"
-                  variant="tonal"
-                  prepend-icon="mdi-logout"
-                  block
-                  @click="toLogout"
-                  :loading="btnLoading"
-                  >退出登录</v-btn
-                >
-              </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        <v-col lg="9" md="8" sm="8" cols="12">
-          <v-card variant="flat" class="mb-5 brightness">
-            <v-tabs color="primary">
-              <v-tab v-for="(item, i) in menus" :key="i" :to="item.path">
-                <v-icon start> mdi-{{ item.icon }} </v-icon>
-                {{ item.name }}
-              </v-tab>
-            </v-tabs>
-          </v-card>
-          <v-card variant="flat" class="brightness" :disabled="progressLinear > 0">
-            <RouterView v-slot="{ Component }">
-              <v-slide-x-transition leave-absolute>
-                <component :is="Component" @update="update" @reset="reset" />
-              </v-slide-x-transition>
-            </RouterView>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-col>
-  </v-row>
+            <M3Icon :name="m.icon" :size="18" />
+            {{ m.name }}
+          </NuxtLink>
+        </nav>
+
+        <div class="user-content">
+          <RouterView v-slot="{ Component }">
+            <Transition name="page" mode="out-in">
+              <component :is="Component" @update="update" @reset="reset" />
+            </Transition>
+          </RouterView>
+        </div>
+      </main>
+    </div>
+
+    <Footer />
+  </div>
 </template>
+
+<style scoped>
+.user-shell {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.user-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: var(--m3e-space-3);
+  min-height: var(--app-topbar-height);
+  padding: 0 var(--m3e-space-5);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line-divider);
+}
+
+.user-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--m3e-space-2);
+  font: var(--m3e-type-title-large);
+}
+
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--m3e-space-1);
+}
+
+.user-body {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--m3e-space-5);
+  width: 100%;
+  max-width: var(--app-max-width);
+  margin: 0 auto;
+  padding: var(--m3e-space-6) var(--m3e-space-5);
+}
+
+.user-profile {
+  width: 264px;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  position: sticky;
+  top: calc(var(--app-topbar-height) + var(--m3e-space-5));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--m3e-space-2);
+  padding: var(--m3e-space-6) var(--m3e-space-4);
+  border-radius: var(--shape-corner-l);
+  background: var(--card-bg);
+  border: 1px solid var(--outline-variant);
+  text-align: center;
+}
+
+.user-avatar {
+  width: 88px;
+  height: 88px;
+  font-size: 28px;
+  box-shadow: var(--m3e-elevation-1);
+}
+
+.user-name {
+  margin: var(--m3e-space-2) 0 0;
+  font: var(--m3e-type-title-large);
+}
+
+.user-mail {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font: var(--m3e-type-body-small);
+  word-break: break-all;
+}
+
+.user-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--m3e-space-2);
+  margin: var(--m3e-space-2) 0;
+}
+
+.user-admin-btn {
+  margin-top: var(--m3e-space-2);
+}
+
+.user-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-radius: var(--shape-corner-l);
+  background: var(--card-bg);
+  border: 1px solid var(--outline-variant);
+  overflow: hidden;
+  --m3-field-label-bg: var(--card-bg);
+}
+
+.user-tabs {
+  padding: 0 var(--m3e-space-3);
+  background: var(--surface-container-low);
+}
+
+.user-content {
+  padding: var(--m3e-space-6);
+}
+
+@media (max-width: 960px) {
+  .user-body {
+    flex-direction: column;
+    padding: var(--m3e-space-4);
+  }
+
+  .user-profile {
+    width: 100%;
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    text-align: left;
+    padding: var(--m3e-space-4);
+    gap: var(--m3e-space-3);
+  }
+
+  .user-avatar {
+    width: 56px;
+    height: 56px;
+  }
+
+  .user-name {
+    margin: 0;
+  }
+
+  .user-chips {
+    justify-content: flex-start;
+    margin: 0;
+  }
+
+  .user-admin-btn {
+    margin: 0 0 0 auto;
+    width: auto;
+  }
+
+  .user-main {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .user-content {
+    padding: var(--m3e-space-4);
+  }
+
+  .user-admin-btn {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+</style>

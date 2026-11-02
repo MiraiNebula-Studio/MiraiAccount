@@ -1,35 +1,32 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
+  devtools: { enabled: false },
   // 整体复用原前端 SPA（纯客户端渲染），与服务端前端保持一致；后端仍由 Nitro 提供 API
   ssr: false,
-  // 全局 CSS 必须在此声明：放在 client-only 插件里的 import 不会被 Nuxt 收集注入，
-  // 会导致 Vuetify 与项目样式缺失（页面呈现为裸 HTML）。
-  css: ['@/styles/vuetify.scss', '@/styles/shit.scss'],
+  // 全局 CSS 必须在此声明：放在 client-only 插件里的 import 不会被 Nuxt 收集注入。
+  // 字体与图标走 npm 包自带 CSS，避免额外 CDN 依赖。
+  css: [
+    'material-symbols/rounded.css',
+    '@fontsource/outfit/300.css',
+    '@fontsource/outfit/400.css',
+    '@fontsource/outfit/500.css',
+    '@fontsource/outfit/700.css',
+    '@fontsource-variable/jetbrains-mono/index.css',
+    '@/styles/tokens.css',
+    '@/styles/base.css',
+    '@/styles/components.css',
+    '@/styles/fonts.css',
+  ],
   app: {
     head: {
+      htmlAttrs: {
+        lang: 'zh-CN',
+      },
       link: [
         {
           rel: 'preconnect',
           href: 'https://cdn.imlazy.ink:233'
-        },
-        {
-          rel: 'preconnect',
-          href: 'https://font.sec.miui.com'
-        },
-        {
-          rel: 'preconnect',
-          href: 'https://lib.baomitu.com'
-        },
-        {
-          rel: 'stylesheet',
-          href: 'https://font.sec.miui.com/font/css?family=MiSans:300,400,500,600,700:Chinese_Simplify,Chinese_Traditional,Latin&display=swap'
-        },
-        {
-          rel: 'stylesheet',
-          href: '//lib.baomitu.com/MaterialDesign-Webfont/7.0.96/css/materialdesignicons.min.css',
-          crossorigin: 'anonymous'
         }
       ]
     }

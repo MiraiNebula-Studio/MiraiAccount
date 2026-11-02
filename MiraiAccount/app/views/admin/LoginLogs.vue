@@ -2,126 +2,92 @@
 import { ref } from 'vue'
 import { indexStore } from '@/stores'
 import { getUserLoginLogsApi } from '@/apis/user'
-import _ from 'lodash'
-import type { LoginIP, SortItem } from '@/types'
+import type { LoginIP } from '@/types'
+import M3Button from '@/components/m3/M3Button.vue'
+import CopyTool from '@/components/CopyTool.vue'
+import DataTable from '@/components/DataTable.vue'
 
 const { showMsg } = indexStore()
 
-const headers = ref([
-  { key: 'id', title: 'ID', order: 'desc' },
+const headers = [
+  { key: 'id', title: 'ID' },
   { key: 'uid', title: '用户 ID' },
   { key: 'ip', title: 'IP 地址' },
   { key: 'location', title: '位置' },
   { key: 'device', title: '设备' },
-  { key: 'time', title: '登录时间' }
-])
+  { key: 'time', title: '登录时间' },
+]
 
 const serverItems = ref<LoginIP[]>([])
-const totalItems = ref(10)
-const currentPage = ref(1)
-const itemsPerPage = ref(10)
-const search = ref('')
-const _sortBy = ref<SortItem[]>([{ key: 'id', order: 'desc' }])
+const totalItems = ref(0)
 const loading = ref(false)
+const lastQuery = ref({ page: 1, pageSize: 10, sortBy: 'id', sortDesc: true, search: '' })
 
-const loadItems = _.throttle(
-  async ({
-    page,
-    itemsPerPage,
-    sortBy
-  }: {
-    page: number
-    itemsPerPage: number
-    sortBy: SortItem[]
-  }) => {
-    try {
-      loading.value = true
-      currentPage.value = page
-      _sortBy.value = sortBy
-      const { data } = await getUserLoginLogsApi(
-        true,
-        page,
-        itemsPerPage,
-        sortBy.length > 0 ? sortBy[0].key : 'id',
-        sortBy.length > 0 ? sortBy[0].order === 'desc' : false,
-        search.value
-      )
-      loading.value = false
-      serverItems.value = data.records
-      totalItems.value = data.totalCount
-    } catch (err: any) {
-      loading.value = false
-      console.error(err)
-      showMsg(err.message, 'red')
-    }
-  },
-  1000
-)
+const loadItems = async (p: {
+  page: number
+  pageSize: number
+  sortBy: string
+  sortDesc: boolean
+  search: string
+}) => {
+  lastQuery.value = p
+  try {
+    loading.value = true
+    const { data } = await getUserLoginLogsApi(true, p.page, p.pageSize, p.sortBy, p.sortDesc, p.search)
+    serverItems.value = data.records
+    totalItems.value = data.totalCount
+  } catch (err: any) {
+    console.error(err)
+    showMsg(err.message, 'red')
+  } finally {
+    loading.value = false
+  }
+}
 
-const refreshItems = () =>
-  loadItems({
-    page: currentPage.value,
-    itemsPerPage: itemsPerPage.value,
-    sortBy: _sortBy.value
-  })
+const refreshItems = () => loadItems(lastQuery.value)
 </script>
 
 <template>
-  <div>
-    <div class="d-flex flex-wrap align-center ga-3">
-      <div class="me-auto text-h6">
-        登录日志 <small>( {{ totalItems }} )</small>
+  <div class="admin-page">
+    <div class="admin-page__head">
+      <div>
+        <h1 class="admin-page__title">登录日志</h1>
+        <p class="admin-page__sub">共 {{ totalItems }} 条记录</p>
       </div>
-
-      <div class="d-flex align-center ga-4">
-        <v-text-field
-          style="min-width: 30vw"
-          v-model:model-value="search"
-          label="搜索"
-          clearable
-          density="compact"
-          append-inner-icon="mdi-magnify"
-          hide-details
-          :disabled="!!search && search.length === 0 && loading"
-        ></v-text-field>
-        <v-btn
-          @click="refreshItems"
-          :loading="loading"
-          prepend-icon="mdi-refresh"
-          variant="outlined"
-          color="primary"
-          >刷新</v-btn
-        >
+      <div class="admin-page__actions">
+        <M3Button variant="text" size="sm" icon="refresh" :loading="loading" @click="refreshItems">
+          刷新
+        </M3Button>
       </div>
     </div>
-    <v-card class="mt-5" variant="outlined">
-      <v-card-text>
-        <v-data-table-server
-          v-model:sort-by="_sortBy"
-          v-model:items-per-page="itemsPerPage"
-          :headers="headers"
-          :items-length="totalItems"
-          :items="serverItems"
-          :loading="loading"
-          :search="search"
-          hover
-          color="transparent"
-          @update:options="loadItems"
-        >
-          <template v-slot:[`item.ip`]="{ item }">
-            <CopyTool :text="item.ip" location="left">
-              <template #default="{ copy, style, act }">
-                <span v-bind="act" @click="copy" :style="style" class="truncate d-block">{{
-                  item.ip
-                }}</span>
-              </template>
-            </CopyTool>
+
+    <DataTable
+      :headers="headers"
+      :items="serverItems"
+      :total="totalItems"
+      :loading="loading"
+      @load="loadItems"
+    >
+      <template #item.ip="{ item }">
+        <CopyTool :text="item.ip">
+          <template #default="{ act }">
+            <span v-bind="act" class="cell-ellipsis">{{ item.ip }}</span>
           </template>
-          <template v-slot:[`item.time`]="{ item }">
-            {{ new Date(item.time).toLocaleString() }}
-          </template>
-        </v-data-table-server>
-      </v-card-text>
-    </v-card>
+        </CopyTool>
+      </template>
+      <template #item.time="{ item }">
+        {{ new Date(item.time).toLocaleString() }}
+      </template>
+    </DataTable>
   </div>
 </template>
+
+<style scoped>
+.cell-ellipsis {
+  display: block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

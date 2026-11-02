@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { userStore } from '@/stores/user'
 import md5 from 'md5'
-import { proxyImg, IMG_PLACEHOLDER } from '@/utils/img'
+import { proxyImg } from '@/utils/img'
+import M3Icon from '@/components/m3/M3Icon.vue'
 
-const eimt = defineEmits(['updateRail'])
+const emit = defineEmits<{ (e: 'navigate'): void }>()
 const { info } = userStore()
 
 const isSuper = info?.role === 'superadmin'
@@ -11,93 +12,97 @@ const isSuper = info?.role === 'superadmin'
 const debugEnabled = info?.debugEnabled === true
 
 const menus = [
-  {
-    title: '仪表板',
-    icon: 'view-dashboard-outline',
-    color: 'primary',
-    to: '/admin/dashboard'
-  },
-  {
-    title: '用户管理',
-    icon: 'account-multiple-outline',
-    color: 'orange',
-    to: '/admin/users'
-  },
-  {
-    title: 'OAuth2 管理',
-    icon: 'vector-link',
-    color: 'teal',
-    to: '/admin/oauth2'
-  },
-  {
-    title: '登录日志',
-    icon: 'script-text-key-outline',
-    color: 'purple',
-    to: '/admin/loginLogs'
-  },
-  {
-    title: '操作审计',
-    icon: 'clipboard-text-clock-outline',
-    color: 'cyan-darken-2',
-    to: '/admin/audit'
-  },
-  {
-    title: '站内公告',
-    icon: 'bullhorn-outline',
-    color: 'pink-darken-1',
-    to: '/admin/announcements'
-  },
-  {
-    title: '站点配置',
-    icon: 'cog-outline',
-    color: 'blue-grey',
-    to: '/admin/site'
-  }
+  { title: '仪表板', icon: 'dashboard', to: '/admin/dashboard' },
+  { title: '用户管理', icon: 'group', to: '/admin/users' },
+  { title: 'OAuth2 管理', icon: 'hub', to: '/admin/oauth2' },
+  { title: '登录日志', icon: 'history', to: '/admin/loginLogs' },
+  { title: '操作审计', icon: 'fact_check', to: '/admin/audit' },
+  { title: '站内公告', icon: 'campaign', to: '/admin/announcements' },
+  { title: '站点配置', icon: 'settings', to: '/admin/site' },
 ]
 
-// 超级管理（清库、管理员权限管理）仅超级管理员且站点开启调试功能时可见。
 if (isSuper && debugEnabled) {
-  menus.push({
-    title: '超级管理',
-    icon: 'shield-crown',
-    color: 'red-darken-1',
-    to: '/admin/super'
-  })
+  menus.push({ title: '超级管理', icon: 'admin_panel_settings', to: '/admin/super' })
 }
+
+const avatar = () =>
+  proxyImg(`https://cravatar.cn/avatar/${md5((info?.email || '').trim().toLowerCase())}?s=96&r=R&d=`)
 </script>
 
 <template>
-  <v-list>
-    <v-list-item :subtitle="info?.email" :title="`#${info?.id} ${info?.username}`">
-      <template v-slot:prepend>
-        <v-avatar @click.stop="eimt('updateRail')" class="cursor-pointer">
-          <v-img
-            :alt="`#${info?.id} ${info?.username}`"
-            :lazy-src="IMG_PLACEHOLDER"
-            aspect-ratio="1"
-            :src="proxyImg(`https://cravatar.cn/avatar/${md5((info?.email || '').trim().toLowerCase())}?s=64&r=R&d=`)"
-          ></v-img>
-        </v-avatar>
-      </template>
-    </v-list-item>
-  </v-list>
-  <v-divider></v-divider>
-  <v-list density="compact" nav>
-    <v-list-item
-      v-for="(item, i) in menus"
-      :key="i"
-      :prepend-icon="`mdi-${item.icon}`"
-      :title="item.title"
-      :to="item.to"
-      :color="item.color"
-    ></v-list-item>
-  </v-list>
-  <v-divider></v-divider>
-  <v-list density="compact" nav>
-    <v-list-item
-      prepend-icon="mdi-account-arrow-left-outline"
-      title="返回用户中心"
-      to="/user/info"
-    ></v-list-item>
-  </v-list>
+  <nav class="admin-menu">
+    <div class="admin-user">
+      <div class="m3-avatar admin-avatar">
+        <img :src="avatar()" :alt="info?.username" loading="lazy" />
+      </div>
+      <div class="admin-user__meta">
+        <span class="admin-user__name">{{ info?.username }}</span>
+        <span class="admin-user__mail">{{ info?.email }}</span>
+      </div>
+    </div>
+
+    <div class="m3-divider" />
+
+    <NuxtLink
+      v-for="m in menus"
+      :key="m.to"
+      :to="m.to"
+      class="m3-menu__item m3-state-layer"
+      active-class="is-active"
+      @click="emit('navigate')"
+    >
+      <M3Icon :name="m.icon" :size="20" />
+      <span>{{ m.title }}</span>
+    </NuxtLink>
+
+    <div class="m3-divider" />
+
+    <NuxtLink to="/user/info" class="m3-menu__item m3-state-layer" @click="emit('navigate')">
+      <M3Icon name="account_circle" :size="20" />
+      <span>返回用户中心</span>
+    </NuxtLink>
+  </nav>
 </template>
+
+<style scoped>
+.admin-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--m3e-space-3);
+}
+
+.admin-user {
+  display: flex;
+  align-items: center;
+  gap: var(--m3e-space-3);
+  padding: var(--m3e-space-2) var(--m3e-space-2) var(--m3e-space-3);
+}
+
+.admin-avatar {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+}
+
+.admin-user__meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-user__name {
+  font: var(--m3e-type-title-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-user__mail {
+  color: var(--on-surface-variant);
+  font: var(--m3e-type-body-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

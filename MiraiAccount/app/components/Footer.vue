@@ -4,36 +4,37 @@ import { siteStore } from '@/stores/site'
 const site = siteStore()
 site.fetchConfig()
 
-// 版权文本支持 HTML（如外链），由管理员在「站点配置」维护，属可信内容，故用 v-html 渲染。
-// {year} 全部替换为当前年份，无需每年手动更新。
+// 版权文本支持 HTML（如外链），由管理员在「站点配置」维护，属可信内容。
 const copyrightText = () => site.copyright.replaceAll('{year}', String(new Date().getFullYear()))
 </script>
 
 <template>
-  <v-footer app>
-    <div class="text-center w-100 text-disabled footer-html" v-html="copyrightText()"></div>
-  </v-footer>
+  <footer class="app-footer">
+    <div class="app-footer__inner" v-html="copyrightText()" />
+  </footer>
 </template>
 
-<style lang="scss" scoped>
-footer {
-  background: transparent;
-  backdrop-filter: blur(10px);
+<style scoped>
+.app-footer {
+  margin-top: auto;
+  padding: var(--m3e-space-6) var(--m3e-space-4) var(--m3e-space-8);
+  color: var(--on-surface-variant);
+  font: var(--m3e-type-body-small);
+  text-align: center;
 }
 
-/* 版权文本支持 HTML：确保其中的链接可点击，并跟随主题色而非被 text-disabled 淡化。 */
-.footer-html {
-  position: relative;
-  z-index: 1;
+.app-footer__inner {
+  max-width: var(--app-max-width);
+  margin: 0 auto;
+  opacity: 0.82;
+}
 
-  :deep(a) {
-    color: rgb(var(--v-theme-primary));
-    text-decoration: none;
-    pointer-events: auto;
+.app-footer :deep(a) {
+  color: var(--primary);
+  text-decoration: none;
+}
 
-    &:hover {
-      text-decoration: underline;
-    }
-  }
+.app-footer :deep(a:hover) {
+  text-decoration: underline;
 }
 </style>

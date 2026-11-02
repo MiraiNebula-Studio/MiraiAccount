@@ -6,6 +6,9 @@ import { indexStore } from '@/stores'
 import { userStore } from '@/stores/user'
 import type { RegistrationResponseJSON } from '@simplewebauthn/types'
 import { browserSupportsWebAuthn, startRegistration } from '@simplewebauthn/browser'
+import M3Dialog from '@/components/m3/M3Dialog.vue'
+import M3Button from '@/components/m3/M3Button.vue'
+import M3Icon from '@/components/m3/M3Icon.vue'
 
 const open = ref(false)
 const openDialog = () => {
@@ -39,7 +42,6 @@ const getRegOption = async () => {
     addBtnLoading.value = false
   }
   showMsg('绑定成功', 'green')
-
   handleOk()
 }
 
@@ -69,48 +71,45 @@ const handleCancel = async () => {
   open.value = false
 }
 
-defineExpose({
-  openDialog
-})
+defineExpose({ openDialog })
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="600" persistent>
-    <v-card
-      :title="info?.authDevice ? '已绑定的PassKey' : '绑定PassKey'"
-      variant="flat"
-      :loading="cardLoading"
-      :disabled="cardLoading"
-    >
-      <v-card-text>
-        <v-list lines="one">
-          <v-list-item
-            v-for="(item, i) in info?.authDevice"
-            :key="i"
-            :title="item.credentialID.slice(0, 10)"
-          >
-            <template #prepend> # {{ i }} -&nbsp;</template>
-            <template #append>
-              <!-- <v-icon></v-icon> -->
-              <v-btn
-                color="red"
-                variant="text"
-                prepend-icon="mdi-repeat-off"
-                @click="deleteAuthDevice(item.credentialID)"
-                :loading="delBtnLoading"
-              >
-                解除绑定
-              </v-btn>
-            </template>
-          </v-list-item>
-        </v-list>
-      </v-card-text>
-      <v-card-actions>
-        <v-btn @click="getRegOption" color="green" :loading="addBtnLoading">添加新的验证器</v-btn>
-        <v-spacer></v-spacer>
+  <M3Dialog
+    v-model="open"
+    :title="info?.authDevice ? '已绑定的 PassKey' : '绑定 PassKey'"
+    size="md"
+    persistent
+  >
+    <div v-if="cardLoading" class="loading-line" />
+    <div v-if="!info?.authDevice?.length" class="m3-empty">
+      <M3Icon name="fingerprint" :size="44" />
+      <b>尚未绑定 PassKey</b>
+      <span>绑定后可使用设备生物识别无密码登录。</span>
+    </div>
 
-        <v-btn @click="handleCancel"> 关闭 </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+    <ul v-else class="m3-list">
+      <li v-for="(item, i) in info?.authDevice" :key="i" class="m3-list__item">
+        <M3Icon class="m3-list__icon" name="passkey" :size="20" />
+        <span class="m3-list__main">
+          <span class="m3-list__title">#{{ i }} · {{ item.credentialID.slice(0, 10) }}</span>
+        </span>
+        <M3Button
+          variant="text"
+          size="xs"
+          :loading="delBtnLoading"
+          @click="deleteAuthDevice(item.credentialID)"
+        >
+          解除绑定
+        </M3Button>
+      </li>
+    </ul>
+
+    <template #actions>
+      <M3Button variant="tonal" size="sm" :loading="addBtnLoading" @click="getRegOption">
+        添加新的验证器
+      </M3Button>
+      <M3Button variant="text" size="sm" @click="handleCancel">关闭</M3Button>
+    </template>
+  </M3Dialog>
 </template>

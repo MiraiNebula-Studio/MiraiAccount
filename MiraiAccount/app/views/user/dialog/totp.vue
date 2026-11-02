@@ -4,6 +4,10 @@ import { storeToRefs } from 'pinia'
 import { userStore } from '@/stores/user'
 import { indexStore } from '@/stores'
 import { totpSetupApi, totpConfirmApi, totpDisableApi } from '@/apis/user'
+import M3Dialog from '@/components/m3/M3Dialog.vue'
+import M3Button from '@/components/m3/M3Button.vue'
+import M3TextField from '@/components/m3/M3TextField.vue'
+import M3Icon from '@/components/m3/M3Icon.vue'
 
 const open = ref(false)
 const enabled = ref(false)
@@ -71,7 +75,6 @@ const disable = async () => {
   }
 }
 
-// 操作完成后重新拉取用户信息，刷新 otpActive 状态。
 const getUserInfo = async () => {
   const store = userStore()
   try {
@@ -88,57 +91,61 @@ defineExpose({ openDialog })
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="500" persistent>
-    <v-card :title="'二步验证（TOTP）'" variant="flat" :loading="loading" :disabled="loading">
-      <v-card-text v-if="enabled">
-        <v-alert type="success" variant="tonal" class="mb-4">
-          已在验证器应用（如 Google Authenticator）中绑定。
-        </v-alert>
-        <v-text-field
-          v-model="code"
-          label="输入验证器当前验证码以关闭"
-          hint="关闭后将不再要求二步验证"
-          persistent-hint
-        ></v-text-field>
-      </v-card-text>
+  <M3Dialog v-model="open" title="二步验证（TOTP）" size="sm" persistent>
+    <div v-if="loading" class="loading-line" />
 
-      <v-card-text v-else>
-        <p class="text-body-2 mb-4">
-          使用验证器应用（如 Google Authenticator、Microsoft Authenticator）扫码绑定，登录时将要求输入动态验证码。
-        </p>
-        <v-img
-          v-if="qrcode"
-          :src="qrcode"
-          max-width="200"
-          class="mx-auto mb-4"
-          contain
-        ></v-img>
-        <v-text-field
-          v-model="code"
-          label="输入验证器中的六位验证码"
-          :disabled="!qrcode"
-        ></v-text-field>
-      </v-card-text>
+    <template v-if="enabled">
+      <div class="m3-banner totp-enabled">
+        <M3Icon name="verified_user" :size="20" />
+        <span>已在验证器应用中绑定，登录时会要求输入动态验证码。</span>
+      </div>
+      <M3TextField v-model="code" label="输入验证器当前验证码以关闭" maxlength="6" inputmode="numeric" help="关闭后将不再要求二步验证" />
+    </template>
 
-      <v-card-actions>
-        <v-spacer></v-spacer>
-        <v-btn v-if="!enabled && !qrcode" @click="generate">生成二维码</v-btn>
-        <v-btn v-if="!enabled && qrcode" variant="tonal" @click="generate">重新生成</v-btn>
-        <v-btn @click="close">取消</v-btn>
-        <v-btn
-          v-if="enabled"
-          color="error"
-          :loading="loading"
-          @click="disable"
-        >关闭</v-btn>
-        <v-btn
-          v-else
-          color="primary"
-          :disabled="!qrcode"
-          :loading="loading"
-          @click="confirm"
-        >确认开启</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+    <template v-else>
+      <p class="totp-desc">
+        使用验证器应用（如 Google Authenticator、Microsoft Authenticator）扫码绑定，登录时将要求输入动态验证码。
+      </p>
+      <div v-if="qrcode" class="totp-qr">
+        <img :src="qrcode" alt="TOTP 绑定二维码" />
+      </div>
+      <M3TextField v-model="code" label="输入验证器中的六位验证码" maxlength="6" inputmode="numeric" :disabled="!qrcode" />
+    </template>
+
+    <template #actions>
+      <M3Button v-if="!enabled && !qrcode" variant="text" size="sm" @click="generate">生成二维码</M3Button>
+      <M3Button v-if="!enabled && qrcode" variant="text" size="sm" @click="generate">重新生成</M3Button>
+      <M3Button variant="text" size="sm" @click="close">取消</M3Button>
+      <M3Button v-if="enabled" variant="danger" size="sm" :loading="loading" @click="disable">关闭</M3Button>
+      <M3Button v-else variant="filled" size="sm" :disabled="!qrcode" :loading="loading" @click="confirm">
+        确认开启
+      </M3Button>
+    </template>
+  </M3Dialog>
 </template>
+
+<style scoped>
+.totp-enabled {
+  margin-bottom: var(--m3e-space-4);
+}
+
+.totp-desc {
+  margin: 0 0 var(--m3e-space-4);
+  color: var(--on-surface-variant);
+  font: var(--m3e-type-body-medium);
+}
+
+.totp-qr {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--m3e-space-4);
+}
+
+.totp-qr img {
+  width: 200px;
+  height: 200px;
+  border-radius: var(--shape-corner-m);
+  background: #fff;
+  padding: var(--m3e-space-2);
+}
+</style>

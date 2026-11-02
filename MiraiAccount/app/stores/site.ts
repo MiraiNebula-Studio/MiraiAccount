@@ -6,7 +6,7 @@ import { getSitePublicApi } from '@/apis/site'
 export const siteStore = defineStore('siteStore', () => {
   const title = ref('MiraiAccount')
   const url = ref('http://localhost:3000')
-  const copyright = ref('© Copyright {year} Lazy All Right Reserved')
+  const copyright = ref('© Copyright {year} MiraiNebula-Studio All Right Reserved')
   const emailVerify = ref(true)
   let loaded = false
 

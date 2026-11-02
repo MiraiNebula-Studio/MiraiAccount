@@ -13,6 +13,6 @@ export async function getSiteConfig(): Promise<SiteConfig> {
   return {
     title: site.title || 'MiraiAccount',
     url: site.url || config.webAuthn.expectedOrigin || 'http://localhost:3000',
-    copyright: site.copyright || '© Copyright {year} Lazy All Right Reserved',
+    copyright: site.copyright || '© Copyright {year} MiraiNebula-Studio All Right Reserved',
   };
 }

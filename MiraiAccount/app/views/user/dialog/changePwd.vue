@@ -4,7 +4,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { updateUInfoApi } from '@/apis/user'
 import { indexStore } from '@/stores'
 import { userStore } from '@/stores/user'
-import type { VForm } from 'vuetify/lib/components/index.mjs'
+import M3Dialog from '@/components/m3/M3Dialog.vue'
+import M3TextField from '@/components/m3/M3TextField.vue'
+import M3Button from '@/components/m3/M3Button.vue'
 
 const open = ref(false)
 const openDialog = () => {
@@ -16,20 +18,31 @@ const { showMsg } = indexStore()
 const { getUserInfo } = userStore()
 const { checkPwd } = useAuth()
 
-const form = ref<InstanceType<typeof VForm>>()
 const formData = ref({
   password: {
     old: '',
     new: '',
-    new2: ''
-  }
+    new2: '',
+  },
 })
+const errorText = ref('')
 
 const handleOk = async () => {
   try {
-    if (!form.value) return
-    const { valid } = await form.value.validate()
-    if (!valid) return
+    if (!formData.value.password.old) {
+      errorText.value = '请输入旧密码'
+      return
+    }
+    const pwd = checkPwd(formData.value.password.new)
+    if (pwd !== true) {
+      errorText.value = pwd
+      return
+    }
+    if (formData.value.password.new2 !== formData.value.password.new) {
+      errorText.value = '两次密码不一致'
+      return
+    }
+    errorText.value = ''
     btnLoading.value = true
     const { msg } = await updateUInfoApi('password', formData.value as any)
     await getUserInfo()
@@ -42,54 +55,33 @@ const handleOk = async () => {
 
 const handleCancel = async () => {
   open.value = false
-  form.value?.reset()
+  formData.value = { password: { old: '', new: '', new2: '' } }
+  errorText.value = ''
 }
 
-defineExpose({
-  openDialog
-})
+defineExpose({ openDialog })
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="500" persistent>
-    <v-card title="更改密码" variant="flat">
-      <v-card-text class="py-0 pt-5">
-        <v-form ref="form" fast-fail @submit.prevent>
-          <v-text-field
-            v-model="formData.password.old"
-            :rules="[(v) => checkPwd(v)]"
-            autofocus
-            clearable
-            label="旧密码"
-            :disabled="btnLoading"
-          >
-          </v-text-field>
-          <v-text-field
-            v-model="formData.password.new"
-            :rules="[(v) => checkPwd(v)]"
-            clearable
-            label="新密码"
-            type="password"
-            :disabled="btnLoading"
-          >
-          </v-text-field>
-          <v-text-field
-            v-model="formData.password.new2"
-            :rules="[(v) => (v === formData.password.new ? true : '两次密码不一致')]"
-            clearable
-            label="确认新密码"
-            type="password"
-            :disabled="btnLoading"
-          >
-          </v-text-field>
-        </v-form>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer></v-spacer>
-        <v-btn @click="handleCancel"> 取消 </v-btn>
-
-        <v-btn @click="handleOk" color="primary" :loading="btnLoading"> 确定 </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  <M3Dialog v-model="open" title="更改密码" size="sm" persistent>
+    <M3TextField v-model="formData.password.old" label="旧密码" type="password" reveal autofocus />
+    <M3TextField
+      v-model="formData.password.new"
+      label="新密码"
+      type="password"
+      reveal
+      help="6-20 位字符"
+    />
+    <M3TextField
+      v-model="formData.password.new2"
+      label="确认新密码"
+      type="password"
+      reveal
+      :error="errorText"
+    />
+    <template #actions>
+      <M3Button variant="text" size="sm" @click="handleCancel">取消</M3Button>
+      <M3Button variant="filled" size="sm" :loading="btnLoading" @click="handleOk">确定</M3Button>
+    </template>
+  </M3Dialog>
 </template>

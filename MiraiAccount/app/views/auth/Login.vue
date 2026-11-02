@@ -3,43 +3,63 @@ import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { indexStore } from '@/stores'
 import { LoginForm } from '@/types'
-import { VForm } from 'vuetify/lib/components/index.mjs'
 import { loginApi, loginTotpApi, getWebAuthnAuthOptionApi, verifyWebAuthnApi } from '@/apis/auth'
 import { userStore } from '@/stores/user'
 import { useRouter } from 'vue-router'
 import type { AuthenticationResponseJSON } from '@simplewebauthn/types'
 import { browserSupportsWebAuthn, startAuthentication } from '@simplewebauthn/browser'
-import { useDisplay } from 'vuetify'
 import { useRouteQuery } from '@vueuse/router'
+import M3TextField from '@/components/m3/M3TextField.vue'
+import M3Button from '@/components/m3/M3Button.vue'
+import M3Chip from '@/components/m3/M3Chip.vue'
 
 const router = useRouter()
-const { xs } = useDisplay()
 const { showMsg, isLogin } = indexStore()
 const { info } = storeToRefs(userStore())
 const redirectUrl = useRouteQuery('redirect')
-const form = ref<InstanceType<typeof VForm>>()
+
 const formData = ref<LoginForm>({
   username: '',
-  password: ''
+  password: '',
 })
 
 const step = ref(1)
+const direction = ref<'forward' | 'back'>('forward')
 const btnLoading = ref(false)
 const wBtnLoading = ref(false)
 const totp = ref('')
 const totpLoading = ref(false)
+const errorText = ref('')
 
-const nextStep = () => formData.value.username && step.value++
+const nextStep = () => {
+  if (!formData.value.username) {
+    errorText.value = '请输入用户名或邮箱'
+    return
+  }
+  errorText.value = ''
+  direction.value = 'forward'
+  step.value++
+}
+
+// 返回上一步：动画方向相反，与前进形成连贯的空间感。
+const prevStep = () => {
+  errorText.value = ''
+  direction.value = 'back'
+  step.value--
+}
 
 const login = async () => {
   try {
-    if (!form.value) return
-    const { valid } = await form.value.validate()
-    if (!valid) return
+    if (!formData.value.password) {
+      errorText.value = '请输入密码'
+      return
+    }
+    errorText.value = ''
     btnLoading.value = true
     const { msg, data } = await loginApi(formData.value)
     if (data?.needTOTP) {
       showMsg(msg, 'green')
+      direction.value = 'forward'
       step.value = 3
       return
     }
@@ -57,7 +77,11 @@ const login = async () => {
 // 登录第二步：提交 TOTP 二步验证码完成登录。
 const loginTotp = async () => {
   try {
-    if (!totp.value) return
+    if (!totp.value || totp.value.length !== 6) {
+      errorText.value = '请输入 6 位动态验证码'
+      return
+    }
+    errorText.value = ''
     totpLoading.value = true
     const { msg, data } = await loginTotpApi(totp.value)
     showMsg(msg, 'green')
@@ -72,9 +96,10 @@ const loginTotp = async () => {
 }
 
 const getAuthOption = async () => {
-  if (!form.value) return
-  const { valid } = await form.value.validate()
-  if (!valid) return
+  if (!formData.value.username) {
+    errorText.value = '请先填写用户名或邮箱'
+    return
+  }
   if (!browserSupportsWebAuthn()) return showMsg('你的浏览器不支持 WebAuthn', 'red')
   let aRes: AuthenticationResponseJSON
   try {
@@ -108,105 +133,166 @@ const getAuthOption = async () => {
 </script>
 
 <template>
-  <v-form ref="form" fast-fail @submit.prevent>
-    <v-slide-y-reverse-transition leave-absolute>
-      <div v-if="step === 2 && formData.username" class="text-center mt-n3 my-4">
-        <v-chip prepend-icon="mdi-account-circle-outline" color="primary">
-          {{ formData.username }}
-        </v-chip>
+  <div class="login">
+    <div class="login-steps">
+      <M3Chip size="sm" :variant="step === 1 ? 'primary' : 'default'" icon="account_circle">
+        账号
+      </M3Chip>
+      <span class="login-step-line" />
+      <M3Chip size="sm" :variant="step === 2 ? 'primary' : 'default'" icon="key">
+        密码
+      </M3Chip>
+      <span class="login-step-line" />
+      <M3Chip size="sm" :variant="step === 3 ? 'primary' : 'default'" icon="verified_user">
+        验证
+      </M3Chip>
+    </div>
+
+    <Transition :name="direction === 'back' ? 'step-back' : 'step-forward'" mode="out-in">
+      <div :key="step" class="login-step">
+        <div v-if="step === 2 && formData.username" class="login-identity">
+          <M3Chip variant="secondary" icon="person">{{ formData.username }}</M3Chip>
+        </div>
+
+        <form @submit.prevent>
+          <M3TextField
+            v-if="step === 1"
+            v-model="formData.username"
+            label="用户名或邮箱"
+            autocomplete="username"
+            autofocus
+            @enter="nextStep"
+          />
+          <M3TextField
+            v-else-if="step === 2"
+            v-model="formData.password"
+            label="密码"
+            type="password"
+            reveal
+            autocomplete="current-password"
+            autofocus
+            :error="errorText"
+            @enter="login"
+          />
+          <M3TextField
+            v-else
+            v-model="totp"
+            label="六位验证码"
+            inputmode="numeric"
+            maxlength="6"
+            autofocus
+            help="输入验证器 App 中的 6 位动态验证码"
+            :error="errorText"
+            @enter="loginTotp"
+          />
+        </form>
+
+        <div v-if="step === 1" class="login-actions">
+          <M3Button variant="text" size="sm" to="/auth/reset">忘记密码</M3Button>
+          <M3Button
+            v-if="browserSupportsWebAuthn()"
+            variant="tonal"
+            size="sm"
+            icon="passkey"
+            :loading="wBtnLoading"
+            @click="getAuthOption"
+          >
+            使用 Passkey
+          </M3Button>
+          <M3Button variant="filled" size="md" icon-right="arrow_forward" @click="nextStep">
+            下一步
+          </M3Button>
+        </div>
+
+        <div v-else-if="step === 2" class="login-actions">
+          <M3Button variant="text" size="sm" icon="arrow_back" @click="prevStep">上一步</M3Button>
+          <M3Button variant="filled" size="md" :loading="btnLoading" icon="login" @click="login">
+            登录
+          </M3Button>
+        </div>
+
+        <div v-else class="login-actions">
+          <M3Button variant="text" size="sm" icon="arrow_back" @click="prevStep">上一步</M3Button>
+          <M3Button variant="filled" size="md" :loading="totpLoading" icon="verified" @click="loginTotp">
+            验证
+          </M3Button>
+        </div>
       </div>
-    </v-slide-y-reverse-transition>
-    <v-slide-x-transition leave-absolute>
-      <v-text-field
-        v-if="step === 1"
-        autofocus
-        v-model="formData.username"
-        :rules="[(v) => (v && v.length > 0 ? true : false)]"
-        label="用户名或邮箱"
-      ></v-text-field>
-      <v-text-field
-        v-else-if="step === 2"
-        autofocus
-        v-model="formData.password"
-        :rules="[(v) => (v && v.length > 0 ? true : false)]"
-        label="密码"
-        type="password"
-      ></v-text-field>
-      <v-text-field
-        v-else-if="step === 3"
-        autofocus
-        v-model="totp"
-        :rules="[(v) => (v && v.length === 6 ? true : false)]"
-        label="六位验证码"
-        placeholder="输入验证器中的动态验证码"
-      ></v-text-field>
-    </v-slide-x-transition>
-
-    <v-row v-if="step === 1">
-      <v-col cols="12" sm="7">
-        <v-row>
-          <v-col cols="12" sm="6">
-            <v-btn size="large" variant="text" color="primary" block to="/auth/reset"
-              >忘记密码</v-btn
-            >
-          </v-col>
-          <v-col v-if="browserSupportsWebAuthn()" cols="12" sm="6">
-            <v-btn
-              size="large"
-              variant="tonal"
-              color="green"
-              block
-              @click="getAuthOption"
-              :loading="wBtnLoading"
-              >使用PassKey</v-btn
-            >
-          </v-col>
-        </v-row>
-      </v-col>
-      <v-col cols="12" sm="5">
-        <v-btn size="large" color="primary" type="submit" block @click="nextStep">下一步</v-btn>
-      </v-col>
-    </v-row>
-
-    <v-row v-else-if="step === 2">
-      <v-col cols="12" sm="6">
-        <v-row>
-          <v-col cols="12" sm="6">
-            <v-btn size="large" variant="text" color="warning" block @click="step--">上一步</v-btn>
-          </v-col>
-          <v-col v-if="!xs" cols="12" sm="6"> </v-col>
-        </v-row>
-      </v-col>
-      <v-col cols="12" sm="6">
-        <v-btn
-          size="large"
-          color="primary"
-          type="submit"
-          block
-          @click="login"
-          :loading="btnLoading"
-        >
-          登录
-        </v-btn>
-      </v-col>
-    </v-row>
-
-    <v-row v-else-if="step === 3">
-      <v-col cols="12" sm="6">
-        <v-btn size="large" variant="text" color="warning" block @click="step--">上一步</v-btn>
-      </v-col>
-      <v-col cols="12" sm="6">
-        <v-btn
-          size="large"
-          color="primary"
-          type="submit"
-          block
-          @click="loginTotp"
-          :loading="totpLoading"
-        >
-          验证
-        </v-btn>
-      </v-col>
-    </v-row>
-  </v-form>
+    </Transition>
+  </div>
 </template>
+
+<style scoped>
+.login {
+  display: flex;
+  flex-direction: column;
+}
+
+.login-step {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 步骤切换：前进向左推入，返回反向，与 M3 emphasized 曲线一致。 */
+.step-forward-enter-active,
+.step-forward-leave-active,
+.step-back-enter-active,
+.step-back-leave-active {
+  transition:
+    opacity var(--m3e-duration-short) var(--m3e-easing-standard),
+    transform var(--m3e-duration-medium) var(--m3e-easing-emphasized-decelerate);
+}
+
+.step-forward-enter-from {
+  opacity: 0;
+  transform: translateX(18px);
+}
+
+.step-forward-leave-to {
+  opacity: 0;
+  transform: translateX(-18px);
+}
+
+.step-back-enter-from {
+  opacity: 0;
+  transform: translateX(-18px);
+}
+
+.step-back-leave-to {
+  opacity: 0;
+  transform: translateX(18px);
+}
+
+.login-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--m3e-space-2);
+  margin-bottom: var(--m3e-space-4);
+}
+
+.login-step-line {
+  width: 22px;
+  height: 1px;
+  background: var(--outline-variant);
+}
+
+.login-identity {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--m3e-space-4);
+}
+
+.login-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--m3e-space-2);
+  margin-top: var(--m3e-space-2);
+}
+
+.login-actions :deep(.m3-btn--filled) {
+  margin-left: auto;
+}
+</style>

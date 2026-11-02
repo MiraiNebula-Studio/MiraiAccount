@@ -1,21 +1,21 @@
 <script lang="ts" setup>
 import { ref, computed } from 'vue'
 import { indexStore } from '@/stores'
-import { useDisplay } from 'vuetify'
-import type { VForm } from 'vuetify/lib/components/index.mjs'
 import _ from 'lodash'
 import { addUserApi, updateUserInfoApi } from '@/apis/user'
 import { UserInfo } from '@/types'
 import { UserStatus } from '@/types'
 import { roleLabel } from '@/utils/role'
+import M3Dialog from '@/components/m3/M3Dialog.vue'
+import M3TextField from '@/components/m3/M3TextField.vue'
+import M3Select from '@/components/m3/M3Select.vue'
+import M3Button from '@/components/m3/M3Button.vue'
 
 // 是否超级管理员：仅超管可调整权限组；超级管理员目标不可编辑。
 const props = defineProps<{ isSuper?: boolean; selfId?: number }>()
 const emit = defineEmits(['update'])
-const { xs } = useDisplay()
 const btnLoading = ref(false)
 const { showMsg } = indexStore()
-const form = ref<InstanceType<typeof VForm>>()
 const formData = ref<UserInfo>({
   id: 0,
   username: '',
@@ -25,15 +25,14 @@ const formData = ref<UserInfo>({
   email: '',
   regTime: '',
   apikey: '',
-  verifyToken: ''
+  verifyToken: '',
 })
 const open = ref(false)
-// 添加模式：新增用户；编辑模式：更新已有用户。
 const adding = ref(false)
+const errorText = ref('')
 
 // 目标为超级管理员时，权限组与状态永不可改动。
 const isSuperTarget = computed(() => formData.value.role === 'superadmin')
-// 非超级管理员仅可编辑自己的账户（或普通用户），管理员/超管账户其余整窗锁定。
 const editable = computed(
   () =>
     props.isSuper ||
@@ -42,9 +41,23 @@ const editable = computed(
 )
 const disabledField = computed(() => btnLoading.value || !editable.value)
 
+const statusOptions = [
+  { label: '正常', value: UserStatus.NORMAL },
+  { label: '封禁', value: UserStatus.BANNED },
+]
+const roleOptions = [
+  { label: '默认', value: 'default' },
+  { label: '管理员', value: 'admin' },
+]
+const statusModel = computed({
+  get: () => String(formData.value.status ?? 0),
+  set: (v: string | number) => (formData.value.status = Number(v)),
+})
+
 const openDialog = (userInfo?: UserInfo) => {
   adding.value = !userInfo || userInfo.id === 0
   open.value = true
+  errorText.value = ''
   formData.value = _.cloneDeep(
     userInfo && userInfo.id
       ? userInfo
@@ -57,23 +70,30 @@ const openDialog = (userInfo?: UserInfo) => {
           email: '',
           regTime: '',
           apikey: '',
-          verifyToken: ''
+          verifyToken: '',
         }
   )
   formData.value.password = ''
 }
 
+const checkUName = (v: string) => /^[a-zA-Z0-9_-]{4,16}$/.test(v)
+
 const handleOk = async () => {
   try {
-    if (!form.value) return
-    const { valid } = await form.value.validate()
-    if (!valid) return
-    btnLoading.value = true
-    // 添加模式下密码必填；编辑模式留空表示不改。
-    if (adding.value && !formData.value.password) {
-      showMsg('请填写初始密码', 'red')
+    if (!checkUName(formData.value.username)) {
+      errorText.value = '用户名必须为 4-16 位字母、数字、下划线或短横线'
       return
     }
+    if (!formData.value.email) {
+      errorText.value = '请填写绑定邮箱'
+      return
+    }
+    if (adding.value && !formData.value.password) {
+      errorText.value = '请填写初始密码'
+      return
+    }
+    errorText.value = ''
+    btnLoading.value = true
     const { msg } = adding.value
       ? await addUserApi(formData.value)
       : await updateUserInfoApi(formData.value)
@@ -87,132 +107,91 @@ const handleOk = async () => {
 
 const handleCancel = async () => {
   open.value = false
-  form.value?.reset()
 }
 
-const checkUName = (v: string) => {
-  if (v && v.length === 0) return false
-  if (!/^[a-zA-Z0-9_-]{4,16}$/.test(v)) return '用户名必须为 4-16 位之间'
-  return true
-}
-
-defineExpose({
-  openDialog
-})
+defineExpose({ openDialog })
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="600" persistent>
-    <v-card
-      :title="adding ? '添加用户' : `编辑用户 ${formData.username}`"
-      variant="flat"
-    >
-      <v-card-text class="py-0 pt-5">
-        <v-form ref="form" fast-fail @submit.prevent>
-          <v-row :no-gutters="xs">
-            <v-col cols="12" xs="12" sm="6">
-              <v-text-field
-                v-model="formData.username"
-                :rules="[(v) => checkUName(v)]"
-                clearable
-                density="compact"
-                label="用户名"
-                :disabled="btnLoading || !editable || (!props.isSuper && !adding)"
-                :persistent-hint="!adding"
-                :hint="!adding ? (props.isSuper ? '超级管理员可修改用户名' : '仅超级管理员可修改用户名') : ''"
-              >
-              </v-text-field>
-            </v-col>
-            <v-col cols="12" xs="12" sm="6">
-              <v-text-field
-                v-model="formData.email"
-                :rules="[(v) => (v && v.length > 0 ? true : false)]"
-                clearable
-                density="compact"
-                label="绑定邮箱"
-                type="email"
-                :disabled="disabledField"
-              >
-              </v-text-field>
-            </v-col>
-            <v-col cols="12" xs="12" sm="6">
-              <v-text-field
-                v-model="formData.password"
-                clearable
-                density="compact"
-                label="密码"
-                :placeholder="adding ? '初始密码' : '（未更改）'"
-                :disabled="disabledField"
-              >
-              </v-text-field>
-            </v-col>
-            <v-col cols="12" xs="12" sm="6">
-              <v-select
-                v-model="formData.status"
-                :items="[
-                  { text: '正常', value: UserStatus.NORMAL },
-                  { text: '封禁', value: UserStatus.BANNED }
-                ]"
-                item-title="text"
-                item-value="value"
-                density="compact"
-                label="状态"
-                variant="outlined"
-                persistent-hint
-                :disabled="
-                  btnLoading || isSuperTarget || !editable || (!props.isSuper && formData.role === 'admin')
-                "
-              ></v-select>
-            </v-col>
-            <v-col cols="12" xs="12" sm="6">
-              <v-select
-                v-if="props.isSuper && !isSuperTarget"
-                v-model="formData.role"
-                :items="[
-                  { text: '默认', value: 'default' },
-                  { text: '管理员', value: 'admin' }
-                ]"
-                item-title="text"
-                item-value="value"
-                density="compact"
-                label="权限组"
-                variant="outlined"
-                :disabled="btnLoading || !editable"
-              ></v-select>
-              <v-text-field
-                v-else
-                :model-value="roleLabel(formData.role)"
-                readonly
-                density="compact"
-                label="权限组"
-                variant="outlined"
-                :disabled="btnLoading || !editable"
-              ></v-text-field>
-            </v-col>
-            <v-col cols="12" xs="12" sm="6">
-              <v-text-field
-                v-model="formData.apikey"
-                clearable
-                density="compact"
-                label="APIKEY"
-                placeholder="暂时没啥用"
-                :disabled="disabledField"
-              >
-              </v-text-field>
-            </v-col>
-          </v-row>
-        </v-form>
-        <small
-          ><b>注意：</b
-          >修改用户名或者邮箱后，需要用户手动重新绑定PassKey！<template v-if="isSuperTarget">超级管理员的权限组与状态不可修改。</template></small
-        >
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer></v-spacer>
-        <v-btn @click="handleCancel"> 取消 </v-btn>
+  <M3Dialog
+    v-model="open"
+    :title="adding ? '添加用户' : `编辑用户 ${formData.username}`"
+    size="lg"
+    persistent
+  >
+    <div class="user-form">
+      <M3TextField
+        v-model="formData.username"
+        label="用户名"
+        :disabled="btnLoading || !editable || (!props.isSuper && !adding)"
+        :help="!adding ? (props.isSuper ? '超级管理员可修改用户名' : '仅超级管理员可修改用户名') : ''"
+      />
+      <M3TextField v-model="formData.email" label="绑定邮箱" type="email" :disabled="disabledField" />
+      <M3TextField
+        v-model="formData.password"
+        label="密码"
+        type="password"
+        reveal
+        :placeholder="adding ? '初始密码' : '（未更改）'"
+        :disabled="disabledField"
+      />
+      <M3Select
+        v-model="statusModel"
+        :options="statusOptions"
+        label="状态"
+        :disabled="btnLoading || isSuperTarget || !editable || (!props.isSuper && formData.role === 'admin')"
+      />
+      <M3Select
+        v-if="props.isSuper && !isSuperTarget"
+        v-model="formData.role"
+        :options="roleOptions"
+        label="权限组"
+        :disabled="btnLoading || !editable"
+      />
+      <M3TextField v-else :model-value="roleLabel(formData.role)" label="权限组" readonly :disabled="btnLoading || !editable" />
+      <M3TextField v-model="formData.apikey" label="APIKEY" placeholder="暂时没啥用" :disabled="disabledField" />
+    </div>
 
-        <v-btn @click="handleOk" color="primary" :loading="btnLoading"> 确定 </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+    <p v-if="errorText" class="user-form__error">{{ errorText }}</p>
+    <p class="user-form__note">
+      <b>注意：</b>修改用户名或者邮箱后，需要用户手动重新绑定 PassKey！
+      <template v-if="isSuperTarget">超级管理员的权限组与状态不可修改。</template>
+    </p>
+
+    <template #actions>
+      <M3Button variant="text" size="sm" @click="handleCancel">取消</M3Button>
+      <M3Button variant="filled" size="sm" :loading="btnLoading" @click="handleOk">确定</M3Button>
+    </template>
+  </M3Dialog>
 </template>
+
+<style scoped>
+.user-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--m3e-space-3);
+}
+
+.user-form :deep(.m3-field) {
+  margin-bottom: var(--m3e-space-3);
+}
+
+.user-form__error {
+  margin: 0 0 var(--m3e-space-2);
+  color: var(--error);
+  font: var(--m3e-type-body-small);
+}
+
+.user-form__note {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font: var(--m3e-type-body-small);
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .user-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+</style>

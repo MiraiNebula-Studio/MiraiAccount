@@ -2,6 +2,12 @@
 import { ref, computed, watch } from 'vue'
 import { indexStore } from '@/stores'
 import { getMyMessagesApi, markMessagesReadApi, type UserMessage } from '@/apis/message'
+import M3Dialog from './m3/M3Dialog.vue'
+import M3IconButton from './m3/M3IconButton.vue'
+import M3Icon from './m3/M3Icon.vue'
+import M3Button from './m3/M3Button.vue'
+import M3Chip from './m3/M3Chip.vue'
+import M3Progress from './m3/M3Progress.vue'
 
 const { isLogin, showMsg } = indexStore()
 
@@ -41,7 +47,6 @@ const openDialog = async (type: 'announcement' | 'message') => {
   await load()
 
   if (type === 'announcement' && announcements.value.length) {
-    // 列表按时间倒序，第一条即当前生效公告。
     const first = announcements.value[0]
     if (first) {
       detail.value = first
@@ -50,7 +55,6 @@ const openDialog = async (type: 'announcement' | 'message') => {
   }
 }
 
-// 点开一条：标记已读并进入详情视图。
 const open = async (m: UserMessage) => {
   detail.value = m
   markRead(m)
@@ -66,7 +70,7 @@ const markRead = async (m: UserMessage) => {
   }
 }
 
-// 登录后首次加载：存在未读公告则直接弹窗展示当前公告，否则收在按钮里。
+// 登录后首次加载：存在未读公告则直接弹窗展示当前公告。
 const boot = async () => {
   await load()
   const unread = announcements.value.filter((m) => !m.read)
@@ -83,7 +87,6 @@ const backToList = () => {
   detail.value = null
 }
 
-// 关闭弹窗时回到初始态，下次打开从头看起。
 watch(dialog, (v) => {
   if (!v) detail.value = null
 })
@@ -114,151 +117,151 @@ watch(
 
 <template>
   <div v-if="isLogin" class="notify-stack">
-    <v-badge :content="announcementUnread" color="red" :model-value="announcementUnread > 0" overlap>
-      <v-btn
-        size="large"
-        color="primary"
-        icon="mdi-bullhorn-outline"
-        variant="tonal"
-        aria-label="公告"
-        @click="openDialog('announcement')"
-      ></v-btn>
-    </v-badge>
-
-    <v-badge :content="messageUnread" color="red" :model-value="messageUnread > 0" overlap>
-      <v-btn
-        size="large"
-        color="primary"
-        icon="mdi-bell-outline"
-        variant="tonal"
-        aria-label="消息"
-        @click="openDialog('message')"
-      ></v-btn>
-    </v-badge>
-
-    <v-dialog v-model="dialog" max-width="560" scrollable>
-      <v-card variant="flat">
-        <!-- 统一头部：类型图标 + 标题 + 操作 -->
-        <v-card-title class="d-flex align-center ga-2 py-3">
-          <v-btn
-            v-if="detail"
-            icon="mdi-arrow-left"
-            variant="text"
-            size="small"
-            aria-label="返回列表"
-            @click="backToList"
-          ></v-btn>
-          <v-icon
-            v-else
-            :icon="isAnnouncement ? 'mdi-bullhorn-outline' : 'mdi-bell-outline'"
-            size="20"
-            color="primary"
-          ></v-icon>
-          <span class="text-subtitle-1 font-weight-medium">
-            {{ detail ? (detail.type === 'announcement' ? '公告' : '消息') : isAnnouncement ? '公告' : '消息' }}
-          </span>
-          <v-spacer></v-spacer>
-          <v-btn
-            v-if="!detail && currentList.some((m) => !m.read)"
-            prepend-icon="mdi-check-all"
-            variant="text"
-            size="small"
-            @click="readAll"
-            >全部已读</v-btn
-          >
-          <v-btn icon="mdi-close" variant="text" size="small" aria-label="关闭" @click="dialog = false"></v-btn>
-        </v-card-title>
-        <v-divider></v-divider>
-
-        <!-- 详情态 -->
-        <v-card-text v-if="detail" class="pt-4">
-          <div class="d-flex align-center ga-2">
-            <v-chip
-              size="x-small"
-              variant="tonal"
-              :color="detail.type === 'announcement' ? 'primary' : 'blue-grey'"
-            >
-              {{ detail.type === 'announcement' ? '站内公告' : '站内消息' }}
-            </v-chip>
-            <span class="text-caption text-medium-emphasis">{{ fmtTime(detail.createdAt) }}</span>
-          </div>
-          <h3 class="text-h6 mt-3 mb-3">{{ detail.title || (detail.type === 'announcement' ? '公告' : '消息') }}</h3>
-          <div class="detail-content text-body-2">{{ detail.content }}</div>
-        </v-card-text>
-
-        <!-- 列表态 -->
-        <v-card-text v-else class="pa-0">
-          <div v-if="loading" class="d-flex align-center justify-center ga-3 pa-8 text-medium-emphasis">
-            <v-progress-circular indeterminate size="20" width="2"></v-progress-circular>
-            <span class="text-body-2">加载中…</span>
-          </div>
-
-          <div
-            v-else-if="!currentList.length"
-            class="d-flex flex-column align-center justify-center pa-10 text-medium-emphasis"
-          >
-            <v-icon
-              :icon="isAnnouncement ? 'mdi-bullhorn-variant-outline' : 'mdi-bell-sleep-outline'"
-              size="44"
-              class="mb-2"
-            ></v-icon>
-            <b class="text-body-1">{{ isAnnouncement ? '暂无公告' : '暂无消息' }}</b>
-            <span class="text-caption mt-1">{{
-              isAnnouncement ? '站点发布公告后会显示在这里' : '收到站内信后会显示在这里'
-            }}</span>
-          </div>
-
-          <v-list v-else lines="two" class="py-0">
-            <template v-for="(m, i) in currentList" :key="m.id">
-              <v-list-item @click="open(m)">
-                <template #prepend>
-                  <v-icon
-                    :icon="m.read ? 'mdi-email-open-outline' : 'mdi-email-outline'"
-                    size="20"
-                    :color="m.read ? undefined : 'primary'"
-                  ></v-icon>
-                </template>
-                <template #title>
-                  <div class="d-flex align-center ga-2">
-                    <span class="text-body-1 text-truncate" :class="m.read ? '' : 'font-weight-medium'">
-                      {{ m.title || (m.type === 'announcement' ? '公告' : '消息') }}
-                    </span>
-                    <v-chip v-if="!m.read" size="x-small" color="primary" variant="flat">未读</v-chip>
-                  </div>
-                </template>
-                <template #subtitle>
-                  <span class="text-body-2 text-truncate d-block">{{ m.content }}</span>
-                  <span class="text-caption text-medium-emphasis d-block mt-1">{{
-                    fmtTime(m.createdAt)
-                  }}</span>
-                </template>
-              </v-list-item>
-              <v-divider v-if="i < currentList.length - 1" class="ms-14"></v-divider>
-            </template>
-          </v-list>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
+    <M3IconButton
+      icon="campaign"
+      label="公告"
+      variant="tonal"
+      size="lg"
+      :badge="announcementUnread || undefined"
+      @click="openDialog('announcement')"
+    />
+    <M3IconButton
+      icon="notifications"
+      label="消息"
+      variant="tonal"
+      size="lg"
+      :badge="messageUnread || undefined"
+      @click="openDialog('message')"
+    />
   </div>
+
+  <M3Dialog v-model="dialog" :title="isAnnouncement ? '公告' : '消息'" size="md">
+    <template #head>
+      <M3IconButton
+        v-if="detail"
+        icon="arrow_back"
+        label="返回列表"
+        size="sm"
+        @click="backToList"
+      />
+      <M3Icon v-else :name="isAnnouncement ? 'campaign' : 'notifications'" :size="20" />
+      <span class="dialog-heading">{{ detail ? '详情' : isAnnouncement ? '公告' : '消息' }}</span>
+      <M3Button
+        v-if="!detail && currentList.some((m) => !m.read)"
+        variant="text"
+        size="xs"
+        icon="done_all"
+        @click="readAll"
+      >
+        全部已读
+      </M3Button>
+    </template>
+
+    <div v-if="detail" class="detail">
+      <div class="detail-meta">
+        <M3Chip size="sm" :variant="detail.type === 'announcement' ? 'primary' : 'secondary'">
+          {{ detail.type === 'announcement' ? '站内公告' : '站内消息' }}
+        </M3Chip>
+        <span class="text-muted">{{ fmtTime(detail.createdAt) }}</span>
+      </div>
+      <h4 class="detail-title">{{ detail.title || (detail.type === 'announcement' ? '公告' : '消息') }}</h4>
+      <div class="detail-content">{{ detail.content }}</div>
+    </div>
+
+    <div v-else>
+      <div v-if="loading" class="empty-state">
+        <M3Progress circular :size="22" />
+        <span>加载中…</span>
+      </div>
+
+      <div v-else-if="!currentList.length" class="m3-empty">
+        <M3Icon :name="isAnnouncement ? 'campaign' : 'notifications_off'" :size="44" />
+        <b>{{ isAnnouncement ? '暂无公告' : '暂无消息' }}</b>
+        <span>{{ isAnnouncement ? '站点发布公告后会显示在这里' : '收到站内信后会显示在这里' }}</span>
+      </div>
+
+      <ul v-else class="m3-list">
+        <li v-for="m in currentList" :key="m.id">
+          <button type="button" class="m3-list__item m3-state-layer" @click="open(m)">
+            <M3Icon
+              class="m3-list__icon"
+              :name="m.read ? 'drafts' : 'mail'"
+              :size="20"
+              :fill="!m.read"
+            />
+            <span class="m3-list__main">
+              <span class="m3-list__title" :class="{ 'is-unread': !m.read }">
+                {{ m.title || (m.type === 'announcement' ? '公告' : '消息') }}
+              </span>
+              <span class="m3-list__desc">{{ m.content }}</span>
+              <span class="m3-list__desc">{{ fmtTime(m.createdAt) }}</span>
+            </span>
+            <M3Chip v-if="!m.read" size="sm" variant="primary">未读</M3Chip>
+            <M3Icon name="chevron_right" :size="20" />
+          </button>
+        </li>
+      </ul>
+    </div>
+  </M3Dialog>
 </template>
 
 <style scoped>
-/* 与猫按钮同列纵向排布：公告在上、消息在下、猫菜单在最底部。 */
 .notify-stack {
   position: fixed;
-  right: 30px;
-  bottom: 114px;
+  right: var(--m3e-space-6);
+  bottom: calc(var(--m3e-space-6) + 72px);
   z-index: 1000;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: var(--m3e-space-3);
 }
 
-/* 详情正文按原始换行展示，长文随弹窗滚动。 */
+.notify-stack :deep(.m3-icon-btn) {
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  box-shadow: var(--m3e-elevation-1);
+}
+
+.dialog-heading {
+  flex: 1 1 auto;
+  font: var(--m3e-type-title-medium);
+}
+
+.detail-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--m3e-space-3);
+  font: var(--m3e-type-body-small);
+}
+
+.detail-title {
+  margin: var(--m3e-space-4) 0 var(--m3e-space-3);
+  font: var(--m3e-type-title-large);
+}
+
 .detail-content {
   white-space: pre-wrap;
   word-break: break-word;
+  color: var(--on-surface);
+  font: var(--m3e-type-body-medium);
   line-height: 1.8;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--m3e-space-3);
+  padding: var(--m3e-space-8);
+  color: var(--on-surface-variant);
+}
+
+.m3-empty span {
+  font: var(--m3e-type-body-small);
+}
+
+.m3-list__item {
+  align-items: center;
 }
 </style>

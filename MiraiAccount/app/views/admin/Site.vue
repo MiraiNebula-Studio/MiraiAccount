@@ -1,37 +1,37 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 import { getConfigApi } from '@/apis/site'
-import _ from 'lodash'
 import { SiteOptions } from '@/types'
 import { userStore } from '@/stores/user'
 import oSite from './dialog/oSite.vue'
+import M3Button from '@/components/m3/M3Button.vue'
+import M3IconButton from '@/components/m3/M3IconButton.vue'
+import M3Icon from '@/components/m3/M3Icon.vue'
 
 const oSiteDialog = ref<InstanceType<typeof oSite>>()
 
-const headers = ref([
+const headers = [
   { key: 'id', title: 'ID' },
   { key: 'optionName', title: '配置项' },
   { key: 'note', title: '备注' },
   { key: 'value', title: '值' },
-  { key: 'operate', title: '操作', sortable: false }
-])
+  { key: 'operate', title: '操作', sortable: false },
+]
 
 const serverItems = ref<SiteOptions[]>([])
-const totalItems = ref(0)
 const loading = ref(false)
 
-const loadItems = _.throttle(async () => {
+const loadItems = async () => {
   try {
     loading.value = true
     const { data } = await getConfigApi()
-    loading.value = false
     serverItems.value = data
-    totalItems.value = data.length
   } catch (err: any) {
-    loading.value = false
     console.error(err)
+  } finally {
+    loading.value = false
   }
-}, 1000)
+}
 
 const refreshItems = () => loadItems()
 
@@ -41,50 +41,62 @@ const onUpdated = async () => {
   await loadItems()
   await userStore().getUserInfo()
 }
+
+loadItems()
 </script>
 
 <template>
-  <div>
-    <div class="d-flex flex-wrap align-center ga-3">
-      <div class="me-auto text-h6">站点配置</div>
-
-      <div class="d-flex align-center ga-4">
-        <v-btn
-          @click="refreshItems"
-          :loading="loading"
-          prepend-icon="mdi-refresh"
-          variant="outlined"
-          color="primary"
-          >刷新</v-btn
-        >
+  <div class="admin-page">
+    <div class="admin-page__head">
+      <div>
+        <h1 class="admin-page__title">站点配置</h1>
+        <p class="admin-page__sub">共 {{ serverItems.length }} 项配置</p>
+      </div>
+      <div class="admin-page__actions">
+        <M3Button variant="text" size="sm" icon="refresh" :loading="loading" @click="refreshItems">
+          刷新
+        </M3Button>
       </div>
     </div>
-    <v-card class="mt-5" variant="outlined">
-      <v-card-text>
-        <v-data-table-server
-          :headers="headers"
-          :items-length="totalItems"
-          :items="serverItems"
-          :loading="loading"
-          hover
-          color="transparent"
-          @update:options="loadItems"
-        >
-          <template v-slot:[`item.operate`]="{ item }">
-            <div class="d-flex align-center flex-nowrap ga-1">
-              <v-btn
-                icon="mdi-pencil-outline"
-                variant="text"
-                size="small"
-                color="primary"
-                @click="oSiteDialog?.openDialog(item)"
-              ></v-btn>
-            </div>
-          </template>
-        </v-data-table-server>
-      </v-card-text>
-    </v-card>
+
+    <div class="m3-table-wrap">
+      <table class="m3-table">
+        <thead>
+          <tr>
+            <th v-for="h in headers" :key="h.key">{{ h.title }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in serverItems" :key="item.id">
+            <td>{{ item.id }}</td>
+            <td><code>{{ item.optionName }}</code></td>
+            <td class="site-note">{{ item.note || '—' }}</td>
+            <td class="site-value">{{ item.value }}</td>
+            <td>
+              <M3IconButton icon="edit" label="编辑配置" size="sm" @click="oSiteDialog?.openDialog(item)" />
+            </td>
+          </tr>
+          <tr v-if="!serverItems.length">
+            <td :colspan="headers.length" class="is-empty">
+              <M3Icon name="database" :size="24" /> 暂无配置
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <oSite ref="oSiteDialog" @update="onUpdated" />
   </div>
 </template>
+
+<style scoped>
+.site-note {
+  max-width: 260px;
+  color: var(--on-surface-variant);
+}
+
+.site-value {
+  max-width: 320px;
+  word-break: break-all;
+}
+</style>

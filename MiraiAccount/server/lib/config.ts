@@ -63,7 +63,7 @@ const template: AppConfig = {
     title: 'MiraiAccount',
     url: 'http://localhost:3000',
     // {year} 在展示时替换为当前年份，无需每年手动改。
-    copyright: '© Copyright {year} Lazy All Right Reserved',
+    copyright: '© Copyright {year} MiraiNebula-Studio All Right Reserved',
   },
   installed: false,
   debug: false,

@@ -1,156 +1,91 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 import { indexStore } from '@/stores'
-import _ from 'lodash'
 import { getUserLoginLogsApi } from '@/apis/user'
-import type { LoginIP, SortItem } from '@/types'
-import { useDisplay } from 'vuetify'
+import type { LoginIP } from '@/types'
+import M3Dialog from '@/components/m3/M3Dialog.vue'
+import DataTable from '@/components/DataTable.vue'
+import CopyTool from '@/components/CopyTool.vue'
 
 const open = ref(false)
 const openDialog = () => {
   open.value = true
+  loadItems({ page: 1, pageSize: 10, sortBy: 'id', sortDesc: true, search: '' })
 }
 
-const { xs } = useDisplay()
 const { showMsg } = indexStore()
-const cardLoading = ref(false)
+const loading = ref(false)
+const serverItems = ref<LoginIP[]>([])
+const totalItems = ref(0)
 
-const headers = ref([
-  { key: 'id', title: 'ID', order: 'desc' },
+const headers = [
+  { key: 'id', title: 'ID' },
   { key: 'ip', title: 'IP 地址' },
   { key: 'location', title: '位置' },
   { key: 'device', title: '设备' },
-  { key: 'time', title: '登录时间' }
-])
+  { key: 'time', title: '登录时间' },
+]
 
-const serverItems = ref<LoginIP[]>([])
-const totalItems = ref(0)
-const currentPage = ref(1)
-const itemsPerPage = ref(10)
-const search = ref('')
-const _sortBy = ref<SortItem[]>([{ key: 'id', order: 'desc' }])
-const loading = ref(false)
-
-const loadItems = _.throttle(
-  async ({
-    page,
-    itemsPerPage,
-    sortBy
-  }: {
-    page: number
-    itemsPerPage: number
-    sortBy: SortItem[]
-  }) => {
-    try {
-      loading.value = true
-      currentPage.value = page
-      _sortBy.value = sortBy
-      const { data } = await getUserLoginLogsApi(
-        false,
-        page,
-        itemsPerPage,
-        sortBy.length > 0 ? sortBy[0].key : 'id',
-        sortBy.length > 0 ? sortBy[0].order === 'desc' : false,
-        search.value
-      )
-      loading.value = false
-      serverItems.value = data.records
-      totalItems.value = data.totalCount
-    } catch (err: any) {
-      loading.value = false
-      console.error(err)
-      showMsg(err.message, 'red')
-    }
-  },
-  1000
-)
-
-const refreshItems = () =>
-  loadItems({
-    page: currentPage.value,
-    itemsPerPage: itemsPerPage.value,
-    sortBy: _sortBy.value
-  })
+const loadItems = async (p: {
+  page: number
+  pageSize: number
+  sortBy: string
+  sortDesc: boolean
+  search: string
+}) => {
+  try {
+    loading.value = true
+    const { data } = await getUserLoginLogsApi(false, p.page, p.pageSize, p.sortBy, p.sortDesc, p.search)
+    serverItems.value = data.records
+    totalItems.value = data.totalCount
+  } catch (err: any) {
+    console.error(err)
+    showMsg(err.message, 'red')
+  } finally {
+    loading.value = false
+  }
+}
 
 const handleCancel = async () => {
   open.value = false
 }
 
-defineExpose({
-  openDialog
-})
+defineExpose({ openDialog })
 </script>
 
 <template>
-  <v-dialog v-model="open" fullscreen hide-overlay transition="dialog-bottom-transition" persistent>
-    <v-card variant="flat" :loading="cardLoading" :disabled="cardLoading">
-      <v-toolbar color="primary">
-        <v-btn icon="mdi-close" @click="handleCancel"></v-btn>
-
-        <v-toolbar-title>登录日志</v-toolbar-title>
-
-        <v-spacer></v-spacer>
-
-        <v-text-field
-          v-if="!xs"
-          v-model:model-value="search"
-          label="搜索"
-          clearable
-          density="compact"
-          append-inner-icon="mdi-magnify"
-          hide-details
-          single-line
-          :disabled="!!search && search.length === 0 && loading"
-        ></v-text-field>
-        <v-btn
-          class="ml-2"
-          icon="mdi-refresh"
-          variant="text"
-          :loading="loading"
-          @click="refreshItems"
-        ></v-btn>
-      </v-toolbar>
-      <v-card-text>
-        <div v-if="xs">
-          <v-text-field
-            v-model:model-value="search"
-            label="搜索"
-            clearable
-            density="compact"
-            append-inner-icon="mdi-magnify"
-            hide-details
-            single-line
-            :disabled="!!search && search.length === 0 && loading"
-          ></v-text-field>
-        </div>
-        <v-data-table-server
-          v-model:sort-by="_sortBy"
-          v-model:items-per-page="itemsPerPage"
-          :headers="headers"
-          :items-length="totalItems"
-          :items="serverItems"
-          :loading="loading"
-          :search="search"
-          fixed-header
-          hover
-          height="75vh"
-          color="transparent"
-          @update:options="loadItems"
-        >
-          <template v-slot:[`item.ip`]="{ item }">
-            <CopyTool :text="item.ip" location="left">
-              <template #default="{ copy, style, act }">
-                <span v-bind="act" @click="copy" :style="style" class="truncate d-block">{{
-                  item.ip
-                }}</span>
-              </template>
-            </CopyTool>
+  <M3Dialog v-model="open" title="登录日志" size="lg" persistent>
+    <DataTable
+      :headers="headers"
+      :items="serverItems"
+      :total="totalItems"
+      :loading="loading"
+      @load="loadItems"
+    >
+      <template #item.ip="{ item }">
+        <CopyTool :text="item.ip">
+          <template #default="{ act }">
+            <span v-bind="act" class="table-ellipsis">{{ item.ip }}</span>
           </template>
-          <template v-slot:[`item.time`]="{ item }">
-            {{ new Date(item.time).toLocaleString() }}
-          </template>
-        </v-data-table-server>
-      </v-card-text>
-    </v-card>
-  </v-dialog>
+        </CopyTool>
+      </template>
+      <template #item.time="{ item }">
+        {{ new Date(item.time).toLocaleString() }}
+      </template>
+    </DataTable>
+
+    <template #actions>
+      <M3Button variant="text" size="sm" @click="handleCancel">关闭</M3Button>
+    </template>
+  </M3Dialog>
 </template>
+
+<style scoped>
+.table-ellipsis {
+  display: block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

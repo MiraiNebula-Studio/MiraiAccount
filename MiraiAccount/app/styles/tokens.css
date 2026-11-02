@@ -1,0 +1,236 @@
+/* ============================================================================
+ * M3E Design Tokens — 参考 Wuchang325-Blog（Shirone）的 Material 3 Expressive 体系
+ * 颜色：优先读取 HCT 引擎写入的 --mc-*，无 JS 时回退到基于 --hue 的 oklch 公式。
+ * 明暗：:root 为浅色，:root.dark 为深色。
+ * ========================================================================= */
+
+:root {
+  --hue: 300;
+  color-scheme: light;
+
+  /* ---------------------------------------------------------------- 主色 */
+  --primary: var(--mc-primary, oklch(0.42 0.16 var(--hue)));
+  --on-primary: var(--mc-on-primary, oklch(0.99 0.02 var(--hue)));
+  --primary-container: var(--mc-primary-container, oklch(0.90 0.06 var(--hue)));
+  --on-primary-container: var(--mc-on-primary-container, oklch(0.24 0.09 var(--hue)));
+  --inverse-primary: var(--mc-inverse-primary, oklch(0.90 0.13 var(--hue)));
+  --primary-fixed: var(--mc-primary-fixed, oklch(0.90 0.06 var(--hue)));
+  --on-primary-fixed: var(--mc-on-primary-fixed, oklch(0.24 0.09 var(--hue)));
+  --primary-dim: var(--mc-primary-dim, oklch(0.38 0.14 var(--hue)));
+
+  /* ---------------------------------------------------------------- 次色 */
+  --secondary: var(--mc-secondary, oklch(0.52 0.13 calc(var(--hue) + 65)));
+  --on-secondary: var(--mc-on-secondary, oklch(0.99 0.02 var(--hue)));
+  --secondary-container: var(--mc-secondary-container, oklch(0.90 0.05 calc(var(--hue) + 65)));
+  --on-secondary-container: var(--mc-on-secondary-container, oklch(0.26 0.08 calc(var(--hue) + 65)));
+  --secondary-dim: var(--mc-secondary-dim, oklch(0.47 0.11 calc(var(--hue) + 65)));
+
+  /* ---------------------------------------------------------------- 第三色 */
+  --tertiary: var(--mc-tertiary, oklch(0.50 0.12 calc(var(--hue) - 100)));
+  --on-tertiary: var(--mc-on-tertiary, oklch(0.99 0.02 var(--hue)));
+  --tertiary-container: var(--mc-tertiary-container, oklch(0.90 0.05 calc(var(--hue) - 100)));
+  --on-tertiary-container: var(--mc-on-tertiary-container, oklch(0.26 0.08 calc(var(--hue) - 100)));
+  --tertiary-dim: var(--mc-tertiary-dim, oklch(0.45 0.10 calc(var(--hue) - 100)));
+
+  /* ---------------------------------------------------------------- 表面 */
+  --surface: var(--mc-surface, oklch(0.96 0.012 var(--hue)));
+  --surface-dim: var(--mc-surface-dim, oklch(0.93 0.014 var(--hue)));
+  --surface-bright: var(--mc-surface-bright, oklch(0.98 0.008 var(--hue)));
+  --surface-container-lowest: var(--mc-surface-container-lowest, oklch(0.985 0.006 var(--hue)));
+  --surface-container-low: var(--mc-surface-container-low, oklch(0.965 0.01 var(--hue)));
+  --surface-container: var(--mc-surface-container, oklch(0.94 0.015 var(--hue)));
+  --surface-container-high: var(--mc-surface-container-high, oklch(0.92 0.02 var(--hue)));
+  --surface-container-highest: var(--mc-surface-container-highest, oklch(0.90 0.025 var(--hue)));
+  --surface-variant: var(--mc-surface-variant, oklch(0.90 0.02 var(--hue)));
+  --surface-tint: var(--mc-surface-tint, var(--primary));
+  --on-surface: var(--mc-on-surface, oklch(0.16 0.02 var(--hue)));
+  --on-surface-variant: var(--mc-on-surface-variant, oklch(0.34 0.03 var(--hue)));
+
+  /* ---------------------------------------------------------------- 轮廓 */
+  --outline: var(--mc-outline, oklch(0.45 0.03 var(--hue)));
+  --outline-variant: var(--mc-outline-variant, oklch(0.76 0.02 var(--hue)));
+
+  /* ------------------------------------------------------------ 反色/错误 */
+  --inverse-surface: var(--mc-inverse-surface, oklch(0.16 0.02 var(--hue)));
+  --inverse-on-surface: var(--mc-inverse-on-surface, oklch(0.96 0.012 var(--hue)));
+  --error: var(--mc-error, oklch(0.57 0.21 27));
+  --on-error: var(--mc-on-error, oklch(0.99 0.01 27));
+  --error-container: var(--mc-error-container, oklch(0.93 0.06 27));
+  --on-error-container: var(--mc-on-error-container, oklch(0.36 0.12 27));
+  --error-dim: var(--mc-error-dim, oklch(0.52 0.18 27));
+  --shadow: var(--mc-shadow, oklch(0.16 0.02 var(--hue)));
+  --scrim: var(--mc-scrim, oklch(0.16 0.02 var(--hue)));
+
+  /* ---------------------------------------------------- 语义表面（明暗差异） */
+  --page-bg: var(--surface-container-low);
+  --card-bg: var(--surface-container-lowest);
+  --card-bg-alt: var(--surface-container-high);
+  --float-panel-bg: var(--surface-container);
+  --field-filled-bg: var(--surface-container-high);
+  /* 浮动标签需要遮住描边；默认跟随页面底色，容器可覆盖为卡片/弹窗底色。 */
+  --m3-field-label-bg: var(--page-bg);
+  --inline-code-bg: var(--surface-container-low);
+  --inline-code-color: var(--on-surface-variant);
+  --selection-bg: var(--primary-container);
+  --codeblock-bg: var(--surface-container-low);
+  --codeblock-topbar-bg: var(--surface-container);
+  --line-divider: var(--outline-variant);
+  --line-color: var(--outline);
+  --link-color: var(--primary);
+  --link-underline: var(--primary-container);
+  --scrollbar-thumb: oklch(0.5 0.02 var(--hue) / 0.35);
+  --scrollbar-thumb-hover: oklch(0.5 0.02 var(--hue) / 0.5);
+  --success: oklch(0.48 0.13 150);
+  --on-success: oklch(0.99 0.01 150);
+  --warning: oklch(0.50 0.13 65);
+  --on-warning: oklch(0.99 0.01 65);
+
+  /* ---------------------------------------------------------------- 形状 */
+  --shape-corner-none: 0;
+  --shape-corner-xs: 4px;
+  --shape-corner-s: 8px;
+  --shape-corner-m: 12px;
+  --shape-corner-l: 16px;
+  --shape-corner-l-plus: 20px;
+  --shape-corner-xl: 28px;
+  --shape-corner-xl-plus: 32px;
+  --shape-corner-2xl: 48px;
+  --shape-corner-full: 999px;
+  --radius-large: var(--shape-corner-l);
+
+  /* ---------------------------------------------------------------- 间距 */
+  --m3e-space-1: 4px;
+  --m3e-space-2: 8px;
+  --m3e-space-3: 12px;
+  --m3e-space-4: 16px;
+  --m3e-space-5: 20px;
+  --m3e-space-6: 24px;
+  --m3e-space-7: 28px;
+  --m3e-space-8: 32px;
+  --m3e-space-10: 40px;
+  --m3e-space-12: 48px;
+  --m3e-space-16: 64px;
+  --m3e-space-compact: var(--m3e-space-2);
+  --m3e-space-control: var(--m3e-space-3);
+  --m3e-space-section: var(--m3e-space-6);
+  --m3e-space-content: var(--m3e-space-8);
+  --m3e-space-page: var(--m3e-space-10);
+
+  /* ------------------------------------------------------------ 密度/断点 */
+  --m3e-bp-sm: 640px;
+  --m3e-bp-md: 768px;
+  --m3e-bp-lg: 1024px;
+  --m3e-bp-xl: 1280px;
+  --m3e-bp-2xl: 1536px;
+  --m3e-density: 0;
+
+  /* ---------------------------------------------------------------- 动效 */
+  --m3e-duration-short: 150ms;
+  --m3e-duration-medium: 250ms;
+  --m3e-duration-long: 400ms;
+  --m3e-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --m3e-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --m3e-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --m3e-easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+
+  /* ---------------------------------------------------------------- 高度 */
+  --m3e-elevation-0: none;
+  --m3e-elevation-1: 0 1px 2px color-mix(in srgb, var(--shadow) 6%, transparent);
+  --m3e-elevation-2:
+    0 1px 2px color-mix(in srgb, var(--shadow) 8%, transparent),
+    0 2px 6px 1px color-mix(in srgb, var(--shadow) 6%, transparent);
+  --m3e-elevation-3:
+    0 2px 4px color-mix(in srgb, var(--shadow) 10%, transparent),
+    0 4px 12px 2px color-mix(in srgb, var(--shadow) 8%, transparent);
+  --m3e-elevation-4:
+    0 4px 8px color-mix(in srgb, var(--shadow) 12%, transparent),
+    0 8px 20px 4px color-mix(in srgb, var(--shadow) 10%, transparent);
+  --m3e-elevation-5:
+    0 6px 12px color-mix(in srgb, var(--shadow) 14%, transparent),
+    0 12px 28px 6px color-mix(in srgb, var(--shadow) 12%, transparent);
+
+  /* ---------------------------------------------------------------- 字体 */
+  --font-body-fallback: ui-sans-serif, system-ui, sans-serif;
+  --font-cjk-fallback: 'HarmonyOS Sans SC', 'MiSans', 'PingFang SC', 'Microsoft YaHei', system-ui,
+    sans-serif;
+  --m3e-font-mono-fallback: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
+  --font-body: 'Outfit', var(--font-body-fallback);
+  --font-cjk: 'Yozai Medium', var(--font-cjk-fallback);
+  --m3e-font-sans: var(--font-body), var(--font-cjk), 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Noto Color Emoji';
+  --font-sans: var(--m3e-font-sans);
+  --font-mono: 'JetBrains Mono', var(--m3e-font-mono-fallback);
+  --m3e-font-mono-family: var(--font-mono);
+
+  /* M3 字体阶梯：weight size/line-height family */
+  --m3e-type-display-large: 400 3.5rem/1.12 var(--font-sans);
+  --m3e-type-display-medium: 400 2.8125rem/1.16 var(--font-sans);
+  --m3e-type-display-small: 400 2.25rem/1.22 var(--font-sans);
+  --m3e-type-display-lg: var(--m3e-type-display-large);
+  --m3e-type-display-md: var(--m3e-type-display-medium);
+  --m3e-type-display-sm: var(--m3e-type-display-small);
+  --m3e-type-headline-large: 400 2rem/1.25 var(--font-sans);
+  --m3e-type-headline-medium: 400 1.75rem/1.29 var(--font-sans);
+  --m3e-type-headline-small: 400 1.5rem/1.33 var(--font-sans);
+  --m3e-type-headline-lg: var(--m3e-type-headline-large);
+  --m3e-type-headline-md: var(--m3e-type-headline-medium);
+  --m3e-type-headline-sm: var(--m3e-type-headline-small);
+  --m3e-type-title-large: 400 1.375rem/1.27 var(--font-sans);
+  --m3e-type-title-medium: 500 1rem/1.5 var(--font-sans);
+  --m3e-type-title-small: 500 0.875rem/1.43 var(--font-sans);
+  --m3e-type-title-lg: var(--m3e-type-title-large);
+  --m3e-type-title-md: var(--m3e-type-title-medium);
+  --m3e-type-title-sm: var(--m3e-type-title-small);
+  --m3e-type-body-large: 400 1rem/1.5 var(--font-sans);
+  --m3e-type-body-medium: 400 0.875rem/1.43 var(--font-sans);
+  --m3e-type-body-small: 400 0.75rem/1.33 var(--font-sans);
+  --m3e-type-body-lg: var(--m3e-type-body-large);
+  --m3e-type-body-md: var(--m3e-type-body-medium);
+  --m3e-type-body-sm: var(--m3e-type-body-small);
+  --m3e-type-label-large: 500 0.875rem/1.43 var(--font-sans);
+  --m3e-type-label-medium: 500 0.75rem/1.33 var(--font-sans);
+  --m3e-type-label-small: 500 0.6875rem/1.45 var(--font-sans);
+  --m3e-type-label-lg: var(--m3e-type-label-large);
+  --m3e-type-label-md: var(--m3e-type-label-medium);
+  --m3e-type-label-sm: var(--m3e-type-label-small);
+  --m3e-type-code: 400 0.875rem/1.43 var(--m3e-font-mono-family);
+
+  /* 状态层不透明度 */
+  --m3e-state-hover-alpha: 8%;
+  --m3e-state-focus-alpha: 10%;
+  --m3e-state-pressed-alpha: 12%;
+  --m3e-state-color: var(--on-surface);
+  --m3e-focus-outline: var(--primary);
+
+  /* ------------------------------------------------------------ 应用几何 */
+  --app-max-width: 1180px;
+  --app-reading-width: 860px;
+  --app-topbar-height: 64px;
+  --app-nav-width: 248px;
+  --app-rail-width: 80px;
+}
+
+:root.dark {
+  color-scheme: dark;
+  --page-bg: var(--surface);
+  --card-bg: var(--surface-container-high);
+  --card-bg-alt: var(--surface-container);
+  --float-panel-bg: var(--surface-container);
+  --field-filled-bg: var(--surface-bright);
+  --inline-code-bg: var(--surface-bright);
+  --codeblock-bg: var(--surface-dim);
+  --codeblock-topbar-bg: var(--surface-container-low);
+  --inverse-surface-fallback: oklch(0.92 0.015 var(--hue));
+  --scrollbar-thumb: oklch(0.85 0.02 var(--hue) / 0.28);
+  --scrollbar-thumb-hover: oklch(0.85 0.02 var(--hue) / 0.42);
+  --success: oklch(0.76 0.12 150);
+  --warning: oklch(0.78 0.12 65);
+}
+
+/* 精确指针设备自动使用紧凑密度（M3 桌面规范） */
+@media (hover: hover) and (pointer: fine) {
+  :root {
+    --m3e-density: -1;
+  }
+}

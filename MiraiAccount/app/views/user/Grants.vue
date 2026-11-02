@@ -2,6 +2,9 @@
 import { ref } from 'vue'
 import { indexStore } from '@/stores'
 import { getGrantsApi, revokeGrantApi, type GrantItem } from '@/apis/user'
+import M3Icon from '@/components/m3/M3Icon.vue'
+import M3IconButton from '@/components/m3/M3IconButton.vue'
+import M3Chip from '@/components/m3/M3Chip.vue'
 
 const { showMsg, openConfirmDialog } = indexStore()
 
@@ -49,49 +52,60 @@ load()
 </script>
 
 <template>
-  <div>
-    <p class="text-body-2 text-medium-emphasis mb-3">
-      已授权给第三方应用访问你的账号数据。
-    </p>
+  <div class="grants">
+    <h2 class="grants-title">授权管理</h2>
+    <p class="grants-desc">已授权给第三方应用访问你的账号数据。</p>
 
-    <div v-if="loading" class="text-medium-emphasis pa-6 text-center">加载中…</div>
-    <div
-      v-else-if="!grants.length"
-      class="d-flex flex-column align-center justify-center pa-10 text-medium-emphasis"
-    >
-      <v-icon icon="mdi-shield-check-outline" size="44" class="mb-2"></v-icon>
+    <div v-if="loading" class="m3-empty"><span>加载中…</span></div>
+
+    <div v-else-if="!grants.length" class="m3-empty">
+      <M3Icon name="verified_user" :size="44" />
       <b>暂无授权应用</b>
-      <span class="text-caption">你还没有授权任何第三方应用访问账号数据。</span>
+      <span>你还没有授权任何第三方应用访问账号数据。</span>
     </div>
 
-    <v-list v-else lines="two">
-      <v-list-item v-for="g in grants" :key="g.clientId">
-        <template #title>{{ g.clientName }}</template>
-        <template #subtitle>
-          <span class="text-caption text-medium-emphasis">上次使用 {{ fmtTime(g.lastUsedAt) }}</span>
-          <div v-if="g.scopes.length" class="mt-1">
-            <v-chip
-              v-for="s in g.scopes"
-              :key="s"
-              size="x-small"
-              variant="tonal"
-              color="primary"
-              class="mr-1"
-              >{{ s }}</v-chip
-            >
-          </div>
-        </template>
-        <template #append>
-          <v-btn
-            icon="mdi-close-circle-outline"
-            variant="text"
-            color="red"
-            title="撤销授权"
-            :loading="revoking === g.clientId"
-            @click="revoke(g)"
-          ></v-btn>
-        </template>
-      </v-list-item>
-    </v-list>
+    <ul v-else class="m3-list">
+      <li v-for="g in grants" :key="g.clientId" class="m3-list__item grant-row">
+        <M3Icon class="m3-list__icon" name="link" :size="20" />
+        <span class="m3-list__main">
+          <span class="m3-list__title">{{ g.clientName }}</span>
+          <span class="m3-list__desc">上次使用 {{ fmtTime(g.lastUsedAt) }}</span>
+          <span v-if="g.scopes.length" class="grant-scopes">
+            <M3Chip v-for="s in g.scopes" :key="s" size="sm" variant="tertiary">{{ s }}</M3Chip>
+          </span>
+        </span>
+        <M3IconButton
+          icon="link_off"
+          label="撤销授权"
+          size="sm"
+          :disabled="revoking === g.clientId"
+          @click="revoke(g)"
+        />
+      </li>
+    </ul>
   </div>
 </template>
+
+<style scoped>
+.grants-title {
+  margin: 0;
+  font: var(--m3e-type-title-large);
+}
+
+.grants-desc {
+  margin: var(--m3e-space-1) 0 var(--m3e-space-4);
+  color: var(--on-surface-variant);
+  font: var(--m3e-type-body-medium);
+}
+
+.grant-row {
+  align-items: center;
+}
+
+.grant-scopes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--m3e-space-1);
+  margin-top: var(--m3e-space-1);
+}
+</style>

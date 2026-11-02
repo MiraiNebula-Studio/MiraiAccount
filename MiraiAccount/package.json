@@ -14,7 +14,10 @@
     "nuxt",
     "mikro-orm"
   ],
-  "author": "Lazy <mirainebula@163.com>",
+  "author": {
+    "name": "MiraiNebula-Studio",
+    "url": "https://github.com/MiraiNebula-Studio"
+  },
   "license": "UNLICENSED",
   "type": "module",
   "private": true,
@@ -26,6 +29,9 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource/outfit": "^5.3.0",
+    "@material/material-color-utilities": "^0.4.0",
     "@mikro-orm/core": "^6.6.2",
     "@mikro-orm/mariadb": "^6.6.2",
     "@simplewebauthn/browser": "^9.0.1",
@@ -43,6 +49,7 @@
     "handlebars": "^4.7.8",
     "lodash": "^4.17.21",
     "mariadb": "^3.2.3",
+    "material-symbols": "^0.48.2",
     "md5": "^2.3.0",
     "mjml": "^4.15.3",
     "nodemailer": "^6.9.8",
@@ -56,8 +63,7 @@
     "ts-ip2region2": "^1.12.0",
     "uuid": "^9.0.1",
     "vue": "^3.5.41",
-    "vue-router": "^5.2.0",
-    "vuetify": "3.5.8"
+    "vue-router": "^5.2.0"
   },
   "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
   "devDependencies": {
@@ -65,6 +71,8 @@
     "@types/speakeasy": "^2.0.10"
   },
   "pnpm": {
-    "ignoredBuiltDependencies": ["@parcel/watcher"]
+    "ignoredBuiltDependencies": [
+      "@parcel/watcher"
+    ]
   }
 }

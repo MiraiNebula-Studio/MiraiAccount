@@ -4,7 +4,11 @@ import { updateUInfoApi } from '@/apis/user'
 import { checkEmailApi, sendEmailCodeApi } from '@/apis/auth'
 import { indexStore } from '@/stores'
 import { userStore } from '@/stores/user'
-import type { VForm } from 'vuetify/lib/components/index.mjs'
+import M3Dialog from '@/components/m3/M3Dialog.vue'
+import M3TextField from '@/components/m3/M3TextField.vue'
+import M3OtpInput from '@/components/m3/M3OtpInput.vue'
+import M3Button from '@/components/m3/M3Button.vue'
+import M3Chip from '@/components/m3/M3Chip.vue'
 
 const open = ref(false)
 const openDialog = () => {
@@ -17,30 +21,24 @@ const { showMsg } = indexStore()
 const { getUserInfo, info } = userStore()
 const timer = ref<NodeJS.Timeout>()
 const num = ref(0)
-const form = ref<InstanceType<typeof VForm>>()
-const formData = ref({
-  email: '',
-  code: ''
-})
+const formData = ref({ email: '', code: '' })
 const sendStatus = ref('')
+const errorText = ref('')
 
 const sendEmailCode = async () => {
-  if (!form.value) return
-  const { valid } = await form.value.validate()
-  if (!valid) return
-
-  // 后端未覆盖此项校验，故在前端先行判断。
+  if (!formData.value.email) {
+    errorText.value = '请输入新的邮箱地址'
+    return
+  }
   if (formData.value.email === info?.email) return showMsg('不可与原邮箱一致', 'warning')
-  await checkEmailApi({
-    email: formData.value.email
-  })
+  await checkEmailApi({ email: formData.value.email })
 
   if (timer.value) clearInterval(timer.value)
   num.value = -1
   eBtnLoading.value = true
   const { data, retryAfter } = await sendEmailCodeApi({
     email: formData.value.email,
-    type: 'changeEmail'
+    type: 'changeEmail',
   })
   eBtnLoading.value = false
   if (data.code !== 200) {
@@ -61,9 +59,15 @@ const sendEmailCode = async () => {
 
 const handleOk = async () => {
   try {
-    if (!form.value) return
-    const { valid } = await form.value.validate()
-    if (!valid) return
+    if (!formData.value.email) {
+      errorText.value = '请输入新的邮箱地址'
+      return
+    }
+    if (formData.value.code.length !== 6) {
+      errorText.value = '请输入 6 位验证码'
+      return
+    }
+    errorText.value = ''
     btnLoading.value = true
     const { msg } = await updateUInfoApi('email', formData.value)
     await getUserInfo()
@@ -76,60 +80,67 @@ const handleOk = async () => {
 
 const handleCancel = async () => {
   open.value = false
-  form.value?.reset()
+  formData.value = { email: '', code: '' }
+  errorText.value = ''
 }
 
-defineExpose({
-  openDialog
-})
+defineExpose({ openDialog })
 </script>
 
 <template>
-  <v-dialog v-model="open" max-width="500" persistent>
-    <v-card title="更改邮箱" variant="flat">
-      <v-card-text class="py-0 pt-5">
-        <v-slide-y-reverse-transition leave-absolute>
-          <div class="mt-n3 mb-2 d-flex flex-wrap justify-center">
-            <v-chip
-              v-if="num > 0 && sendStatus !== ''"
-              prepend-icon="mdi-robot-angry-outline"
-              color="error"
-            >
-              请等待 {{ num }} 秒后重试
-            </v-chip>
-            <v-chip v-else-if="num > 0" prepend-icon="mdi-robot-happy-outline" color="success">
-              已发送验证码，{{ num }} 秒后可重新发送
-            </v-chip>
-            <v-chip v-if="num === -1" prepend-icon="mdi-robot-outline" color="warning">
-              验证码发送中...
-            </v-chip>
-          </div>
-        </v-slide-y-reverse-transition>
-        <v-form ref="form" fast-fail @submit.prevent>
-          <v-text-field
-            v-model="formData.email"
-            :rules="[(v) => (v && v.length > 0 ? true : false)]"
-            autofocus
-            clearable
-            hide-details
-            label="新的邮箱地址"
-            type="email"
-            :disabled="btnLoading"
-          >
-          </v-text-field>
-          <v-otp-input v-model="formData.code" :disabled="btnLoading"></v-otp-input>
-        </v-form>
-        <small><b>注意：</b>更改后，原绑定的PassKey将会被删除，需要重新绑定！</small>
-      </v-card-text>
-      <v-card-actions>
-        <v-btn v-if="num === 0" color="primary" :loading="eBtnLoading" @click="sendEmailCode"
-          >发送验证码</v-btn
-        >
-        <v-spacer></v-spacer>
-        <v-btn @click="handleCancel"> 取消 </v-btn>
+  <M3Dialog v-model="open" title="更改邮箱" size="sm" persistent>
+    <div class="dialog-status">
+      <M3Chip v-if="num > 0 && sendStatus !== ''" size="sm" variant="error" icon="speed">
+        请等待 {{ num }} 秒后重试
+      </M3Chip>
+      <M3Chip v-else-if="num > 0" size="sm" icon="mark_email_read">
+        已发送验证码，{{ num }} 秒后可重新发送
+      </M3Chip>
+      <M3Chip v-else-if="num === -1" size="sm" variant="tertiary" icon="schedule">
+        验证码发送中…
+      </M3Chip>
+    </div>
 
-        <v-btn @click="handleOk" color="primary" :loading="btnLoading"> 确定 </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+    <M3TextField
+      v-model="formData.email"
+      label="新的邮箱地址"
+      type="email"
+      autofocus
+      :disabled="btnLoading"
+      :error="errorText"
+    />
+    <M3OtpInput v-model="formData.code" :disabled="btnLoading" />
+
+    <p class="dialog-note"><b>注意：</b>更改后，原绑定的 PassKey 将会被删除，需要重新绑定。</p>
+
+    <template #actions>
+      <M3Button
+        v-if="num === 0"
+        variant="text"
+        size="sm"
+        :loading="eBtnLoading"
+        @click="sendEmailCode"
+      >
+        发送验证码
+      </M3Button>
+      <M3Button variant="text" size="sm" @click="handleCancel">取消</M3Button>
+      <M3Button variant="filled" size="sm" :loading="btnLoading" @click="handleOk">确定</M3Button>
+    </template>
+  </M3Dialog>
 </template>
+
+<style scoped>
+.dialog-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--m3e-space-2);
+  margin-bottom: var(--m3e-space-4);
+}
+
+.dialog-note {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font: var(--m3e-type-body-small);
+  line-height: 1.6;
+}
+</style>

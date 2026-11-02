@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { createGlobalState, useStorage } from '@vueuse/core'
-import type { VSnackbar } from 'vuetify/lib/components/index.mjs'
 type AppTheme = 'light' | 'dark' | 'auto'
+type SnackbarLocation = 'top center' | 'bottom center'
 
 export const indexStore = createGlobalState(() => {
   const appTheme = useStorage<AppTheme>('AppTheme', 'auto')
@@ -10,8 +10,8 @@ export const indexStore = createGlobalState(() => {
     show: boolean
     text: string
     timeout: number
-    color: VSnackbar['color']
-    location: VSnackbar['location']
+    color: string
+    location: SnackbarLocation
   }>({
     show: false,
     text: '',
@@ -23,7 +23,7 @@ export const indexStore = createGlobalState(() => {
   const showMsg = (
     msg: string,
     color = '',
-    location = 'top center' as VSnackbar['location'],
+    location = 'top center' as SnackbarLocation,
     timeout = 2000
   ) => {
     snackbar.value = {

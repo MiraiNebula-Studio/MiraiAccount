@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue'
 import md5 from 'md5'
-import { useDisplay } from 'vuetify'
 import { indexStore } from '@/stores'
 import { RegForm } from '@/types'
-import type { VForm } from 'vuetify/lib/components/index.mjs'
 import { checkEmailApi, sendEmailCodeApi, regApi, loginApi } from '@/apis/auth'
 import { useAuth } from '@/hooks/useAuth'
 import { proxyImg } from '@/utils/img'
 import { siteStore } from '@/stores/site'
+import M3TextField from '@/components/m3/M3TextField.vue'
+import M3Button from '@/components/m3/M3Button.vue'
+import M3Chip from '@/components/m3/M3Chip.vue'
+import M3OtpInput from '@/components/m3/M3OtpInput.vue'
+import M3Icon from '@/components/m3/M3Icon.vue'
 
 const site = siteStore()
 site.fetchConfig()
@@ -17,22 +20,21 @@ const emit = defineEmits<{
   update: [type: 'title' | 'image', arg: string]
   reset: []
 }>()
-const { xs } = useDisplay()
 const { showMsg } = indexStore()
 const { checkUName, checkPwd } = useAuth()
 
-const form = ref<InstanceType<typeof VForm>>()
 const formData = ref<RegForm>({
   email: '',
   username: '',
   password: '',
-  code: ''
+  code: '',
 })
 const confirmPwd = ref('')
 const timer = ref<NodeJS.Timeout>()
 const num = ref(-1)
 const sendStatus = ref('')
 const btnLoading = ref(false)
+const errorText = ref('')
 
 const sendEmailCode = async () => {
   if (timer.value) clearInterval(timer.value)
@@ -40,7 +42,7 @@ const sendEmailCode = async () => {
   btnLoading.value = true
   const { data, retryAfter } = await sendEmailCodeApi({
     email: formData.value.email,
-    type: 'reg'
+    type: 'reg',
   })
   btnLoading.value = false
   if (data.code !== 200) {
@@ -67,17 +69,33 @@ enum Step {
   UNAME = 1,
   EMAIL,
   CODE,
-  SUCCESS
+  SUCCESS,
+}
+
+const validateBase = async () => {
+  if (!formData.value.username) return '请输入用户名'
+  const uname = await checkUName(formData.value.username)
+  if (uname !== true) return typeof uname === 'string' ? uname : '用户名不可用'
+  const pwd = checkPwd(formData.value.password)
+  if (pwd !== true) return pwd
+  if (confirmPwd.value !== formData.value.password) return '两次密码不一致'
+  return ''
 }
 
 const STEP_ACTION = {
   [Step.UNAME]: async () => {
-    if (!formData.value.username) return
+    if (!formData.value.username || !formData.value.password) {
+      errorText.value = '请填写用户名与密码'
+      return
+    }
     try {
       btnLoading.value = true
-      if (!form.value) return
-      const { valid } = await form.value.validate()
-      if (!valid) return
+      const err = await validateBase()
+      if (err) {
+        errorText.value = err
+        return
+      }
+      errorText.value = ''
       step.value++
       emit('update', 'image', '015.png')
     } finally {
@@ -85,7 +103,10 @@ const STEP_ACTION = {
     }
   },
   [Step.EMAIL]: async () => {
-    if (!formData.value.email) return
+    if (!formData.value.email) {
+      errorText.value = '请输入邮箱'
+      return
+    }
     try {
       btnLoading.value = true
       await checkEmailApi(formData.value)
@@ -97,6 +118,7 @@ const STEP_ACTION = {
         step.value = Step.SUCCESS
         return
       }
+      errorText.value = ''
       step.value++
       sendEmailCode()
       emit('update', 'image', '020.png')
@@ -105,7 +127,10 @@ const STEP_ACTION = {
     }
   },
   [Step.CODE]: async () => {
-    if (formData.value.code.length !== 6) return
+    if (formData.value.code.length !== 6) {
+      errorText.value = '请输入 6 位验证码'
+      return
+    }
     try {
       btnLoading.value = true
       const { msg } = await regApi(formData.value)
@@ -116,7 +141,7 @@ const STEP_ACTION = {
       btnLoading.value = false
     }
   },
-  [Step.SUCCESS]: async () => {}
+  [Step.SUCCESS]: async () => {},
 }
 
 const nextStep = async () => await STEP_ACTION[step.value]()
@@ -126,7 +151,7 @@ const toUserCenter = async () => {
   try {
     await loginApi({
       username: formData.value.username,
-      password: formData.value.password
+      password: formData.value.password,
     })
     window.location.href = '/user/info'
   } finally {
@@ -138,148 +163,171 @@ onUnmounted(() => emit('reset'))
 </script>
 
 <template>
-  <v-form ref="form" fast-fail @submit.prevent>
-    <v-slide-y-reverse-transition leave-absolute>
-      <div
-        v-if="step > Step.UNAME && step < Step.SUCCESS && formData.email"
-        class="mt-n3 d-flex flex-wrap justify-center ga-3"
-        :class="{ 'my-4': step !== Step.CODE }"
-      >
-        <v-chip prepend-icon="mdi-account-circle-outline" color="primary">
-          {{ formData.email }} {{ formData.username && `(${formData.username})` }}
-        </v-chip>
+  <div class="register">
+    <div class="register-summary">
+      <M3Chip v-if="formData.username" variant="secondary" icon="person">
+        {{ formData.username }}
+      </M3Chip>
+      <M3Chip v-if="step > Step.UNAME && step < Step.SUCCESS && formData.email" variant="primary" icon="mail">
+        {{ formData.email }}
+      </M3Chip>
+    </div>
 
-        <v-chip
-          v-if="step === Step.CODE && num > 0 && sendStatus !== ''"
-          prepend-icon="mdi-robot-angry-outline"
-          color="error"
-        >
-          你的操作太快了，请等待 {{ num }} 秒后重试
-        </v-chip>
-        <v-chip
-          v-else-if="step === Step.CODE && num > 0"
-          prepend-icon="mdi-robot-happy-outline"
-          color="success"
-        >
-          已发送验证码，{{ num }} 秒后可重新发送
-        </v-chip>
-        <v-chip
-          v-if="step === Step.CODE && num === -1"
-          prepend-icon="mdi-robot-outline"
-          color="warning"
-        >
-          验证码发送中...
-        </v-chip>
-      </div>
-    </v-slide-y-reverse-transition>
+    <div v-if="step === Step.CODE" class="register-status">
+      <M3Chip v-if="num > 0 && sendStatus !== ''" variant="error" icon="speed">
+        操作太快了，请等待 {{ num }} 秒后重试
+      </M3Chip>
+      <M3Chip v-else-if="num > 0" variant="default" icon="mark_email_read">
+        已发送验证码，{{ num }} 秒后可重新发送
+      </M3Chip>
+      <M3Chip v-else-if="num === -1" variant="tertiary" icon="schedule">验证码发送中…</M3Chip>
+    </div>
 
-    <v-slide-x-transition group leave-absolute>
-      <div v-if="step === Step.UNAME">
-        <v-text-field
+    <form @submit.prevent>
+      <template v-if="step === Step.UNAME">
+        <M3TextField
           v-model="formData.username"
-          autofocus
-          :rules="[(v) => checkUName(v)]"
           label="用户名"
-          clearable
-          validate-on="blur"
-        ></v-text-field>
-        <v-row :no-gutters="xs">
-          <v-col :sm="6" :cols="12">
-            <v-text-field
-              v-model="formData.password"
-              :rules="[(v) => checkPwd(v)]"
-              clearable
-              label="密码"
-              type="password"
-            ></v-text-field>
-          </v-col>
-          <v-col :sm="6" :cols="12">
-            <v-text-field
-              v-model="confirmPwd"
-              :rules="[(v) => (v === formData.password ? true : '两次密码不一致')]"
-              clearable
-              label="确认密码"
-              type="password"
-            ></v-text-field>
-          </v-col>
-        </v-row>
-      </div>
+          autocomplete="username"
+          autofocus
+          help="4-16 位字母、数字、下划线或短横线"
+          :error="errorText"
+        />
+        <div class="register-grid">
+          <M3TextField
+            v-model="formData.password"
+            label="密码"
+            type="password"
+            reveal
+            autocomplete="new-password"
+            help="6-20 位字符"
+          />
+          <M3TextField
+            v-model="confirmPwd"
+            label="确认密码"
+            type="password"
+            reveal
+            autocomplete="new-password"
+          />
+        </div>
+      </template>
 
-      <v-text-field
+      <M3TextField
         v-if="step === Step.EMAIL"
         v-model="formData.email"
-        autofocus
-        :rules="[(v) => (v && v.length > 0 ? true : false)]"
         label="一个能用的邮箱"
         type="email"
-      ></v-text-field>
+        autocomplete="email"
+        autofocus
+        :error="errorText"
+        @enter="nextStep"
+      />
 
       <div v-if="step === Step.CODE">
-        <v-otp-input
-          v-model="formData.code"
-          autofocus
-          class="mb-1"
-          :disabled="btnLoading"
-          @finish="nextStep"
-        ></v-otp-input>
+        <M3OtpInput v-model="formData.code" :disabled="btnLoading" @finish="nextStep" />
+        <p v-if="errorText" class="register-error">{{ errorText }}</p>
       </div>
 
-      <div v-if="step === Step.SUCCESS">
-        <v-card class="mx-auto" max-width="400" color="primary" variant="tonal">
-          <v-card-text>
-            <v-list-item class="w-100">
-              <v-list-item-title>{{ formData.username }}</v-list-item-title>
-
-              <v-list-item-subtitle>{{ formData.email }}</v-list-item-subtitle>
-
-              <template v-slot:append>
-                <v-avatar
-                  :image="proxyImg(`https://cravatar.cn/avatar/${md5((formData.email || '').trim().toLowerCase())}?s=100&r=R&d=`)"
-                ></v-avatar>
-              </template>
-            </v-list-item>
-          </v-card-text>
-          <v-card-actions class="d-flex justify-center">
-            <v-btn @click="toUserCenter" :loading="btnLoading"> 前往用户中心 </v-btn>
-          </v-card-actions>
-        </v-card>
+      <div v-if="step === Step.SUCCESS" class="register-success">
+        <div class="m3-avatar register-avatar">
+          <img
+            :src="proxyImg(`https://cravatar.cn/avatar/${md5((formData.email || '').trim().toLowerCase())}?s=100&r=R&d=`)"
+            :alt="formData.username"
+          />
+        </div>
+        <M3Icon name="task_alt" :size="28" />
+        <b>{{ formData.username }}</b>
+        <span class="text-muted">{{ formData.email }}</span>
+        <M3Button variant="filled" size="md" :loading="btnLoading" @click="toUserCenter">
+          前往用户中心
+        </M3Button>
       </div>
-    </v-slide-x-transition>
+    </form>
 
-    <v-btn
-      v-if="step === 1"
-      size="large"
-      color="primary"
-      type="submit"
-      block
-      :loading="btnLoading"
-      @click="nextStep"
-      >下一步</v-btn
-    >
-    <v-row v-else-if="step < Step.SUCCESS">
-      <v-col cols="12" sm="6">
-        <v-row>
-          <v-col cols="12" sm="6">
-            <v-btn size="large" variant="text" color="warning" block @click="step--">上一步</v-btn>
-          </v-col>
-          <v-col cols="12" sm="6" v-if="step === Step.CODE && num === 0">
-            <v-btn size="large" variant="text" color="primary" block @click="sendEmailCode"
-              >重新发送</v-btn
-            >
-          </v-col>
-        </v-row>
-      </v-col>
-      <v-col cols="12" sm="6">
-        <v-btn
-          size="large"
-          color="primary"
-          type="submit"
-          block
-          :loading="btnLoading"
-          @click="nextStep"
-          >下一步</v-btn
-        >
-      </v-col>
-    </v-row>
-  </v-form>
+    <div v-if="step === Step.UNAME" class="register-actions">
+      <M3Button variant="filled" size="md" block :loading="btnLoading" @click="nextStep">
+        下一步
+      </M3Button>
+    </div>
+
+    <div v-else-if="step < Step.SUCCESS" class="register-actions">
+      <M3Button variant="text" size="sm" icon="arrow_back" @click="step--">上一步</M3Button>
+      <M3Button
+        v-if="step === Step.CODE && num === 0"
+        variant="text"
+        size="sm"
+        icon="mail"
+        @click="sendEmailCode"
+      >
+        重新发送
+      </M3Button>
+      <M3Button variant="filled" size="md" :loading="btnLoading" @click="nextStep">
+        下一步
+      </M3Button>
+    </div>
+  </div>
 </template>
+
+<style scoped>
+.register-summary,
+.register-status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--m3e-space-2);
+  margin-bottom: var(--m3e-space-4);
+}
+
+.register-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--m3e-space-3);
+}
+
+.register-error {
+  margin: 0 0 var(--m3e-space-4);
+  color: var(--error);
+  font: var(--m3e-type-body-small);
+  text-align: center;
+}
+
+.register-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--m3e-space-2);
+  padding: var(--m3e-space-6);
+  border-radius: var(--shape-corner-l);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  text-align: center;
+}
+
+.register-avatar {
+  width: 64px;
+  height: 64px;
+}
+
+.register-success b {
+  font: var(--m3e-type-title-large);
+}
+
+.register-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--m3e-space-2);
+  margin-top: var(--m3e-space-3);
+}
+
+.register-actions :deep(.m3-btn--filled) {
+  margin-left: auto;
+}
+
+@media (max-width: 560px) {
+  .register-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+</style>
